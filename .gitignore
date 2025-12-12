@@ -10,5 +10,9 @@ out
 # Env
 .env.local
 .env.*
+serviceAccountKey.json
+*.json.key
 # Mac/OS
 .DS_Store
+
+.claude

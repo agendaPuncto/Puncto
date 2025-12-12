@@ -1,0 +1,153 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isPlatformAdmin() {
+      return isAuthenticated() &&
+             request.auth.token.platformAdmin == true;
+    }
+
+    function isBusinessOwner(businessId) {
+      return isAuthenticated() &&
+             request.auth.token.businessRoles != null &&
+             request.auth.token.businessRoles[businessId] == 'owner';
+    }
+
+    function isBusinessStaff(businessId) {
+      return isAuthenticated() &&
+             request.auth.token.businessRoles != null &&
+             request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional'];
+    }
+
+    function hasPermission(businessId, permission) {
+      // Check staff document for manager permissions
+      return isBusinessOwner(businessId) ||
+             (exists(/databases/$(database)/documents/businesses/$(businessId)/staff/$(request.auth.uid)) &&
+              get(/databases/$(database)/documents/businesses/$(businessId)/staff/$(request.auth.uid)).data.permissions[permission] == true);
+    }
+
+    // Global Collections
+
+    match /businesses/{businessId} {
+      // Platform admins and business staff can read
+      allow read: if isPlatformAdmin() || isBusinessStaff(businessId);
+
+      // Only platform admins can create businesses (via Cloud Function after payment)
+      allow create: if isPlatformAdmin();
+
+      // Owners can update their business
+      allow update: if isBusinessOwner(businessId) || isPlatformAdmin();
+
+      // Only platform admins can delete (soft delete via Cloud Function)
+      allow delete: if isPlatformAdmin();
+
+      // Subcollections
+
+      match /locations/{locationId} {
+        allow read: if isBusinessStaff(businessId);
+        allow write: if isBusinessOwner(businessId) || hasPermission(businessId, 'manageLocations') || isPlatformAdmin();
+      }
+
+      match /professionals/{professionalId} {
+        // Anyone can read (for public booking page)
+        allow read: if true;
+        allow write: if isBusinessOwner(businessId) || hasPermission(businessId, 'manageProfessionals') || isPlatformAdmin();
+      }
+
+      match /services/{serviceId} {
+        // Public read for booking page
+        allow read: if true;
+        allow write: if isBusinessOwner(businessId) || hasPermission(businessId, 'manageServices') || isPlatformAdmin();
+      }
+
+      match /bookings/{bookingId} {
+        // Staff can read all bookings
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+
+        // Customers can read their own bookings
+        allow read: if isAuthenticated() &&
+                      (resource.data.customerId == request.auth.uid ||
+                       resource.data.createdBy == request.auth.uid);
+
+        // Anyone can create bookings (guest or authenticated)
+        allow create: if true;
+
+        // Staff with permission can update
+        allow update: if isBusinessOwner(businessId) ||
+                        hasPermission(businessId, 'manageBookings') ||
+                        isPlatformAdmin();
+
+        // No deletion - only status updates
+        allow delete: if false;
+      }
+
+      match /staff/{staffId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) || isPlatformAdmin();
+      }
+
+      match /customers/{customerId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+
+        // Customer can read their own data
+        allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+        // Staff with permission can write
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+    }
+
+    match /users/{userId} {
+      // Users can read/write their own document
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+
+      // Platform admins can read all
+      allow read: if isPlatformAdmin();
+    }
+
+    match /platformAdmins/{adminId} {
+      allow read: if isPlatformAdmin();
+      allow write: if false; // Only via Cloud Function
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isPlatformAdmin();
+      allow write: if false; // Only via Cloud Function
+    }
+
+    match /supportTickets/{ticketId} {
+      // Business staff can read their own tickets
+      allow read: if isAuthenticated() &&
+                    exists(/databases/$(database)/documents/supportTickets/$(ticketId)) &&
+                    isBusinessStaff(get(/databases/$(database)/documents/supportTickets/$(ticketId)).data.businessId);
+
+      // Platform admins can read all
+      allow read: if isPlatformAdmin();
+
+      // Business staff can create tickets
+      allow create: if isAuthenticated() &&
+                      isBusinessStaff(request.resource.data.businessId);
+
+      // Both can update (add messages)
+      allow update: if (isAuthenticated() && isBusinessStaff(resource.data.businessId)) ||
+                      isPlatformAdmin();
+    }
+
+    match /featureFlags/{businessId} {
+      allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /subscriptionPlans/{planId} {
+      allow read: if true; // Public pricing page
+      allow write: if isPlatformAdmin();
+    }
+  }
+}
