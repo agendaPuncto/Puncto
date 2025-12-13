@@ -12,31 +12,76 @@ export function middleware(request: NextRequest) {
     // Local development: use query param or header for testing
     // e.g., http://localhost:3000?subdomain=demo
     subdomain = url.searchParams.get('subdomain') || '';
+    console.log('[Middleware] Detected localhost, subdomain from query:', subdomain);
   } else {
     // Production: extract from hostname
-    // e.g., demo.puncto.app -> demo
+    // e.g., demo.puncto.com.br -> demo
     const parts = hostname.split('.');
     if (parts.length >= 3) {
       subdomain = parts[0];
     }
   }
 
+  // Check if user is authenticated (has Firebase auth cookie)
+  // Firebase sets __session cookie for authenticated users
+  const hasAuthCookie = request.cookies.has('__session') ||
+                        request.cookies.has('firebase-auth-token');
+
+  // Auth routes - redirect if already logged in
+  if (url.pathname.startsWith('/auth/')) {
+    if (hasAuthCookie && (url.pathname === '/auth/login' || url.pathname === '/auth/signup')) {
+      const returnUrl = url.searchParams.get('returnUrl') || '/';
+      return NextResponse.redirect(new URL(returnUrl, request.url));
+    }
+    return NextResponse.next();
+  }
+
   // Platform admin routes
   if (subdomain === 'admin') {
+    // Require authentication for platform routes
+    if (!hasAuthCookie && !url.pathname.startsWith('/auth/')) {
+      return NextResponse.redirect(
+        new URL(`/auth/login?returnUrl=${encodeURIComponent(url.pathname)}`, request.url)
+      );
+    }
     // Rewrite to /platform/* routes
     return NextResponse.rewrite(new URL(`/platform${url.pathname}`, request.url));
   }
 
   // Main domain (marketing site)
-  if (!subdomain || subdomain === 'www' || hostname === 'puncto.app') {
+  if (!subdomain || subdomain === 'www' || hostname === 'puncto.com.br') {
     // Allow marketing routes to pass through
+    console.log('[Middleware] No subdomain or www/main domain, passing through to marketing site');
     return NextResponse.next();
   }
+
+  console.log('[Middleware] Business subdomain detected:', subdomain, '- rewriting to /tenant');
 
   // Business subdomain
   // Store businessSlug in header for server components to access
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-business-slug', subdomain);
+
+  // Protected admin routes within tenant subdomain
+  if (url.pathname.startsWith('/tenant/admin') || url.pathname.startsWith('/admin')) {
+    if (!hasAuthCookie) {
+      return NextResponse.redirect(
+        new URL(`/auth/login?returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
+      );
+    }
+  }
+
+  // Protected customer account routes
+  if (url.pathname.startsWith('/tenant/my-bookings') ||
+      url.pathname.startsWith('/tenant/profile') ||
+      url.pathname.startsWith('/my-bookings') ||
+      url.pathname.startsWith('/profile')) {
+    if (!hasAuthCookie) {
+      return NextResponse.redirect(
+        new URL(`/auth/login?returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
+      );
+    }
+  }
 
   // Rewrite to /tenant/* routes with slug in header
   return NextResponse.rewrite(

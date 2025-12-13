@@ -42,9 +42,4 @@ if (!getApps().length) {
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Configure Firestore settings
-db.settings({
-  ignoreUndefinedProperties: true,
-});
-
 export default app;

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 import { Service, Professional } from '@/types';
@@ -14,9 +16,21 @@ const formatDate = (d: Date) =>
   d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
 export default function BookingPage() {
+  const router = useRouter();
   const { business } = useBusiness();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'book' | 'gallery' | 'reviews'>('book');
   const [filterMode, setFilterMode] = useState<'service' | 'pro'>('service');
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[BookingPage] User state:', user);
+    console.log('[BookingPage] User logged in:', !!user);
+    if (user) {
+      console.log('[BookingPage] User display name:', user.displayName);
+      console.log('[BookingPage] User email:', user.email);
+    }
+  }, [user]);
 
   // Data from Firestore
   const [services, setServices] = useState<Service[]>([]);
@@ -72,6 +86,22 @@ export default function BookingPage() {
     fetchData();
   }, [business.id]);
 
+  // Auto-fill customer data if user is logged in
+  useEffect(() => {
+    console.log('[Auto-fill] User changed:', user);
+    if (user && user.displayName) {
+      console.log('[Auto-fill] Display name found:', user.displayName);
+      const nameParts = user.displayName.split(' ');
+      const first = nameParts[0] || '';
+      const last = nameParts.slice(1).join(' ') || '';
+      console.log('[Auto-fill] Setting firstName:', first, 'lastName:', last);
+      setFirstName(first);
+      setLastName(last);
+    } else {
+      console.log('[Auto-fill] No user or no display name');
+    }
+  }, [user]);
+
   // Filter services based on selected professional
   const visibleServices = React.useMemo(() => {
     if (filterMode === 'service' || !selectedPro) return services;
@@ -118,7 +148,14 @@ export default function BookingPage() {
   }
 
   async function submitBooking() {
-    if (!currentService || !currentPro) return;
+    if (!currentService || !currentPro) {
+      console.error('[submitBooking] Missing service or professional');
+      return;
+    }
+
+    console.log('[submitBooking] Starting booking submission...');
+    console.log('[submitBooking] User:', user);
+    console.log('[submitBooking] Customer data:', { firstName, lastName, phone });
 
     setSubmitting(true);
     try {
@@ -139,11 +176,12 @@ export default function BookingPage() {
         endDateTime: Timestamp.fromDate(
           new Date(new Date(`${selectedDate}T${selectedTime}`).getTime() + currentService.durationMinutes * 60000)
         ),
+        customerId: user?.id || null, // Link to user account if logged in
         customerData: {
           firstName,
           lastName,
           phone,
-          email: '',
+          email: user?.email || '',
         },
         status: 'pending',
         price: currentService.price,
@@ -154,11 +192,15 @@ export default function BookingPage() {
         updatedAt: Timestamp.now(),
       };
 
+      console.log('[submitBooking] Booking data:', bookingData);
+
       const docRef = await addDoc(bookingsRef, bookingData);
+      console.log('[submitBooking] Booking created with ID:', docRef.id);
+
       setCreatedId(docRef.id);
       setStep(5);
     } catch (error) {
-      console.error('Error creating booking:', error);
+      console.error('[submitBooking] Error creating booking:', error);
       alert('Erro ao criar agendamento. Tente novamente.');
     } finally {
       setSubmitting(false);
@@ -213,12 +255,38 @@ export default function BookingPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="rounded-xl border px-4 py-2 text-sm hover:bg-neutral-50">
-                Entrar (opcional)
-              </button>
-              <button className="rounded-xl bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-800">
-                Continuar como convidado
-              </button>
+              {user ? (
+                <>
+                  <div className="text-sm">
+                    <span className="text-neutral-600">Olá, </span>
+                    <span className="font-medium">{user.displayName || user.email}</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await logout();
+                      router.refresh();
+                    }}
+                    className="rounded-xl border px-4 py-2 text-sm hover:bg-neutral-50"
+                  >
+                    Sair
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="/auth/login"
+                    className="rounded-xl border px-4 py-2 text-sm hover:bg-neutral-50 inline-block"
+                  >
+                    Entrar
+                  </a>
+                  <a
+                    href="/auth/signup"
+                    className="rounded-xl bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-800 inline-block"
+                  >
+                    Criar conta
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
