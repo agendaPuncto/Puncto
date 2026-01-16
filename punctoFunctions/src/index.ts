@@ -20,3 +20,10 @@ export { setCustomClaims } from "./auth/setCustomClaims";
 // ===== Staff Management Functions =====
 export { inviteStaff } from "./staff/inviteStaff";
 export { acceptInvite } from "./staff/acceptInvite";
+
+// ===== Scheduled Functions =====
+export { sendBookingReminders } from "./scheduled/reminders";
+
+// ===== Firestore Triggers =====
+export { onBookingCreate } from "./triggers/onBookingCreate";
+export { onBookingCancel } from "./triggers/onBookingCancel";

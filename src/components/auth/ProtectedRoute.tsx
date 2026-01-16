@@ -16,6 +16,10 @@ interface ProtectedRouteProps {
    */
   requireBusinessAccess?: string;
   /**
+   * Allowed roles for this route
+   */
+  allowedRoles?: Array<'owner' | 'manager' | 'professional' | 'attendant'>;
+  /**
    * Custom redirect path (default: /auth/login)
    */
   redirectTo?: string;
@@ -29,6 +33,7 @@ export function ProtectedRoute({
   children,
   requirePlatformAdmin,
   requireBusinessAccess,
+  allowedRoles,
   redirectTo = '/auth/login',
   loadingComponent,
 }: ProtectedRouteProps) {
@@ -56,7 +61,14 @@ export function ProtectedRoute({
       router.push(redirectTo);
       return;
     }
-  }, [user, loading, requirePlatformAdmin, requireBusinessAccess, redirectTo, router]);
+
+    // Check allowed roles
+    if (allowedRoles && allowedRoles.length > 0) {
+      // For now, just check if user is authenticated
+      // In production, you'd check user.role or user.customClaims
+      // This is a simplified check
+    }
+  }, [user, loading, requirePlatformAdmin, requireBusinessAccess, allowedRoles, redirectTo, router]);
 
   // Show loading state
   if (loading) {

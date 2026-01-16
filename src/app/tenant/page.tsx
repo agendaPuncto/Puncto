@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 import { Service, Professional } from '@/types';
+import { useAvailability } from '@/lib/hooks/useAvailability';
+import { AddToCalendar } from '@/components/booking/AddToCalendar';
 
 // Helper functions
 const money = (cents: number) =>
@@ -116,11 +118,19 @@ export default function BookingPage() {
     return professionals.filter(p => svc.professionalIds.includes(p.id));
   }, [filterMode, selectedService, professionals, services]);
 
-  // Mock time slots (in real app, would check availability in Firestore)
+  // Fetch available time slots from API
+  const { data: availabilityData, isLoading: loadingAvailability } = useAvailability(
+    selectedDate,
+    selectedPro || undefined,
+    selectedService || undefined
+  );
+
   const timeSlots = React.useMemo(() => {
-    // For now, return mock slots - will be replaced with real availability checking
-    return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-  }, [selectedPro, selectedService]);
+    if (!availabilityData) return [];
+    return availabilityData
+      .filter((slot) => slot.available)
+      .map((slot) => new Date(slot.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  }, [availabilityData]);
 
   const currentService = React.useMemo(() =>
     services.find(s => s.id === selectedService) || null,
@@ -470,12 +480,17 @@ export default function BookingPage() {
                     <div className="md:col-span-2">
                       <label className="text-xs text-neutral-600">Horários disponíveis</label>
                       <div className="mt-1 flex flex-wrap gap-2">
-                        {timeSlots.length === 0 && (
+                        {loadingAvailability && (
+                          <span className="text-sm text-neutral-500">Carregando horários...</span>
+                        )}
+                        {!loadingAvailability && timeSlots.length === 0 && (
                           <span className="text-sm text-neutral-500">
-                            Selecione um serviço/profissional para ver os horários.
+                            {selectedService && selectedPro
+                              ? 'Nenhum horário disponível para esta data. Tente outra data.'
+                              : 'Selecione um serviço e profissional para ver os horários.'}
                           </span>
                         )}
-                        {timeSlots.map(t => (
+                        {!loadingAvailability && timeSlots.map((t) => (
                           <button
                             key={t}
                             onClick={() => setSelectedTime(t)}
@@ -612,15 +627,39 @@ export default function BookingPage() {
               )}
 
               {/* Confirmation */}
-              {step === 5 && (
+              {step === 5 && createdId && (
                 <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
                   <h3 className="mb-2 text-base font-medium">Agendamento criado! 🎉</h3>
                   <p className="text-sm text-neutral-700">
                     Enviamos uma confirmação para seu WhatsApp/e‑mail. Código da reserva:{' '}
                     <span className="font-mono">{createdId}</span>
                   </p>
-                  <div className="mt-4">
-                    <a href="#" className="text-sm text-blue-600 hover:underline">
+                  <div className="mt-4 flex gap-3">
+                    <AddToCalendar
+                      booking={{
+                        id: createdId,
+                        businessId: business.id,
+                        serviceId: currentService?.id || '',
+                        serviceName: currentService?.name || '',
+                        professionalId: currentPro?.id || '',
+                        professionalName: currentPro?.name || '',
+                        locationId: '',
+                        scheduledDate: selectedDate,
+                        scheduledTime: selectedTime || '',
+                        scheduledDateTime: new Date(`${selectedDate}T${selectedTime}`),
+                        durationMinutes: currentService?.durationMinutes || 60,
+                        endDateTime: new Date(`${selectedDate}T${selectedTime}`),
+                        customerData: { firstName, lastName, phone, email: user?.email },
+                        status: 'pending',
+                        price: currentService?.price || 0,
+                        currency: 'BRL',
+                        reminders: {},
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                      }}
+                      business={business}
+                    />
+                    <a href="#" className="text-sm text-blue-600 hover:underline self-center">
                       Ver meus agendamentos
                     </a>
                   </div>
