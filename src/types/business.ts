@@ -60,6 +60,27 @@ export interface FeatureFlags {
   bookingRetentionDays: number;
   customerRetentionDays: number;
   exportFormats: string[];
+  // Phase 3: Restaurant Module
+  restaurantMenu?: boolean;
+  tableOrdering?: boolean;
+  virtualTabs?: boolean;
+  splitPayments?: boolean;
+  thermalPrinting?: boolean;
+  nfceGeneration?: boolean;
+  // Phase 3: ERP Module
+  inventoryManagement?: boolean;
+  purchaseOrders?: boolean;
+  costCalculation?: boolean;
+  budgets?: boolean;
+  // Phase 3: Time Clock
+  timeClock?: boolean;
+  attendanceReports?: boolean;
+  payrollExport?: boolean;
+  // Phase 3: CRM
+  customerSegmentation?: boolean;
+  loyaltyPrograms?: boolean;
+  campaigns?: boolean;
+  birthdayReminders?: boolean;
 }
 
 export interface WorkingHours {

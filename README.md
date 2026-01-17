@@ -94,7 +94,7 @@ Puncto simplifies daily operations for small and medium businesses in beauty, ae
 
 ## 🚀 Features by Phase
 
-### Phase 1 — Scheduling + Confirmations (MVP)
+### Phase 1 — Scheduling + Confirmations (MVP) ✅ **COMPLETED**
 **Timeline:** Months 1-3
 
 ✅ **Core Features:**
@@ -118,7 +118,7 @@ Puncto simplifies daily operations for small and medium businesses in beauty, ae
 
 ---
 
-### Phase 2 — Payments + Financial Reports
+### Phase 2 — Payments + Financial Reports ✅ **COMPLETED**
 **Timeline:** Months 4-6
 
 💳 **Payment Features:**
@@ -142,7 +142,7 @@ Puncto simplifies daily operations for small and medium businesses in beauty, ae
 
 ---
 
-### Phase 3 — Restaurant Management + Mini-ERP
+### Phase 3 — Restaurant Management + Mini-ERP ✅ **COMPLETED**
 **Timeline:** Months 7-10
 
 🍽️ **Restaurant/Café Module:**
@@ -979,15 +979,24 @@ firebase deploy --only functions:sendBookingReminder
 - [x] Internal ledger (double-entry bookkeeping)
 - [x] Accounting integrations (SPED export API endpoint)
 
-### 📅 Phase 3: Restaurant + ERP (Months 7-10)
-- [ ] Digital menu with QR codes
-- [ ] Table ordering
-- [ ] Real-time virtual tab
-- [ ] Split payments
-- [ ] Electronic time clock
-- [ ] Inventory management
-- [ ] Tax invoices (NFS-e/NFC-e)
-- [ ] CRM and campaigns
+### ✅ Phase 3: Restaurant + ERP (Months 7-10) - **COMPLETED**
+- [x] Digital menu with QR codes
+- [x] Table ordering (PWA with cart system)
+- [x] Real-time virtual tab (kitchen + waiter + customer views)
+- [x] Split payments (equal, by-item, custom)
+- [x] Electronic time clock (PIN/biometric, breaks, geolocation)
+- [x] Inventory management (stock tracking, movements, low stock alerts)
+- [x] Purchases & suppliers (purchase orders, receiving workflow)
+- [x] Cost per dish (CSP) and recipe management
+- [x] Cost centers & budgets
+- [x] Tax invoices (NFC-e generation with TecnoSpeed/eNotas/PlugNotas integration)
+- [x] Thermal printer integration (ESC/POS for kitchen orders)
+- [x] Time bank & overtime calculation (Brazilian law compliance)
+- [x] Attendance reports & payroll export (CSV/Excel)
+- [x] CRM & customer segmentation
+- [x] Loyalty programs (points, cashback, tier-based rewards)
+- [x] Targeted campaigns (email, WhatsApp, SMS, push)
+- [x] Birthday reminders (automated campaigns)
 
 ### 🌎 Phase 4: Scale (Months 11-14)
 - [ ] Multi-language (EN/ES)

@@ -33,3 +33,10 @@ export { processCommission } from "./payments/processCommission";
 
 // ===== Scheduled Reports =====
 export { generateDailyFinancialSummary } from "./reports/dailySummary";
+
+// ===== Phase 3: Restaurant & ERP Functions =====
+export { onOrderCreate } from "./triggers/onOrderCreate";
+export { onOrderPaid } from "./triggers/onOrderPaid";
+export { checkInventoryAlerts } from "./scheduled/inventoryAlerts";
+export { sendBirthdayReminders } from "./scheduled/birthdayReminders";
+export { onClockIn } from "./triggers/onClockIn";

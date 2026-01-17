@@ -44,3 +44,51 @@ export type {
 // Feature types
 export type { SubscriptionTier } from './features';
 export { TIER_FEATURES } from './features';
+
+// Restaurant types
+export type {
+  Product,
+  MenuCategory,
+  Table,
+  Order,
+  OrderItem,
+  OrderStatus,
+  OrderItemStatus,
+  PaymentMethod,
+  SplitPayment,
+} from './restaurant';
+
+// Inventory types
+export type {
+  InventoryItem,
+  InventoryMovement,
+  InventoryMovementType,
+} from './inventory';
+
+// Purchases types
+export type {
+  Supplier,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  PurchaseOrderItem,
+} from './purchases';
+
+// Time Clock types
+export type {
+  ClockIn,
+  ClockInType,
+  Shift,
+  ShiftStatus,
+  ShiftSchedule,
+} from './timeClock';
+
+// CRM types
+export type {
+  CustomerSegment,
+  LoyaltyProgram,
+  LoyaltyProgramType,
+  LoyaltyTier,
+  Campaign,
+  CampaignType,
+  CampaignStatus,
+} from './crm';

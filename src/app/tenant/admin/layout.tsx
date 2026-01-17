@@ -19,6 +19,18 @@ const adminNavItems = [
   { href: '/tenant/admin/customers', label: 'Clientes', icon: '👤' },
   { href: '/tenant/admin/payments', label: 'Pagamentos', icon: '💳' },
   { href: '/tenant/admin/financial', label: 'Financeiro', icon: '💰' },
+  // Phase 3: Restaurant Module
+  { href: '/tenant/admin/menu', label: 'Cardápio', icon: '🍽️' },
+  { href: '/tenant/admin/orders', label: 'Pedidos', icon: '📋' },
+  { href: '/tenant/admin/tables', label: 'Mesas', icon: '🪑' },
+  // Phase 3: ERP Module
+  { href: '/tenant/admin/inventory', label: 'Estoque', icon: '📦' },
+  { href: '/tenant/admin/purchases', label: 'Compras', icon: '🛒' },
+  // Phase 3: Time Clock
+  { href: '/tenant/admin/time-clock', label: 'Ponto', icon: '⏰' },
+  // Phase 3: CRM
+  { href: '/tenant/admin/loyalty', label: 'Fidelidade', icon: '🎁' },
+  { href: '/tenant/admin/campaigns', label: 'Campanhas', icon: '📢' },
   { href: '/tenant/admin/settings', label: 'Configurações', icon: '⚙️' },
 ];
 

@@ -61,6 +61,9 @@ export async function POST(request: NextRequest) {
       payload.channels = [
         `org:${orgId}:bookings`,
         `org:${orgId}:orders`,
+        `org:${orgId}:kitchen`,
+        `org:${orgId}:timeclock`,
+        `org:${orgId}:inventory`,
       ];
     }
 

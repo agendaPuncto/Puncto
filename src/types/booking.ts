@@ -70,6 +70,16 @@ export interface Customer {
   dataExportRequested?: Timestamp | Date;
   deletionRequested?: Timestamp | Date;
   customFields?: Record<string, any>;
+  // Phase 3: CRM fields
+  tags?: string[];
+  segmentIds?: string[];
+  lifetimeValue?: number;
+  lastVisitAt?: Timestamp | Date;
+  // Phase 3: Loyalty fields
+  loyaltyPoints?: number;
+  loyaltyTier?: string;
+  totalPointsEarned?: number;
+  totalPointsRedeemed?: number;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
 }
