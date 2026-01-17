@@ -327,7 +327,7 @@ Create `centrifugo.json` config:
   "api_key": "your_api_key_from_env",
   "admin_password": "your_admin_password",
   "admin_secret": "your_admin_secret",
-  "allowed_origins": ["http://localhost:3000", "https://puncto.app"],
+  "allowed_origins": ["http://localhost:3000", "https://puncto.com.br"],
   "namespaces": [
     {
       "name": "org",
@@ -428,7 +428,7 @@ Puncto/
 │   │   │   ├── support/               # Support tickets
 │   │   │   ├── billing/               # Subscription management
 │   │   │   └── analytics/             # Platform metrics
-│   │   ├── (marketing)/               # Marketing site (puncto.app)
+│   │   ├── (marketing)/               # Marketing site (puncto.com.br)
 │   │   │   ├── page.tsx               # Landing page
 │   │   │   ├── pricing/               # Pricing plans
 │   │   │   ├── features/              # Feature pages
@@ -894,7 +894,7 @@ npm test -- --coverage
    ```
 
 4. **Custom Domain:**
-   - Add domain in Vercel dashboard: `puncto.app`
+   - Add domain in Vercel dashboard: `puncto.com.br`
    - Configure DNS:
      ```
      @ A 76.76.21.21
@@ -1025,10 +1025,10 @@ Copyright © 2026 Puncto. Unauthorized copying, distribution, or use is strictly
 
 ## 📞 Support
 
-- **Documentation:** [docs.puncto.app](https://docs.puncto.app)
-- **Email:** support@Puncto.app
+- **Documentation:** [docs.puncto.com.br](https://docs.puncto.com.br)
+- **Email:** support@puncto.com.br
 - **Discord:** [discord.gg/puncto](https://discord.gg/puncto)
-- **Status Page:** [status.puncto.app](https://status.puncto.app)
+- **Status Page:** [status.puncto.com.br](https://status.puncto.com.br)
 
 ---
 

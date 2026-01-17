@@ -1,0 +1,18 @@
+{
+    "token_hmac_secret_key": "5ee265a7af2da834f90edfd6e879343b5e9a8496162a8e6d4b027ad8838a0784",
+    "api_key": "fe4128a923583a4a11cf3891bf30478f493f989176e84521f4d2bbe979bda3f9",
+    "admin_password": "SgBBHYKvKUa0hurCo779muadaLn/GrQL",
+    "admin_secret": "nAZw+kHR11/2Xu3enEUAEENYiHK8vqaI",
+    "allowed_origins": ["http://localhost:3000", "https://puncto.com.br"],
+    "namespaces": [
+      {
+        "name": "org",
+        "publish": true,
+        "subscribe_to_publish": true,
+        "presence": true,
+        "join_leave": true,
+        "history_size": 10,
+        "history_ttl": "300s"
+      }
+    ]
+  }
