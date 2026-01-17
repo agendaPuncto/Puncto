@@ -27,3 +27,9 @@ export { sendBookingReminders } from "./scheduled/reminders";
 // ===== Firestore Triggers =====
 export { onBookingCreate } from "./triggers/onBookingCreate";
 export { onBookingCancel } from "./triggers/onBookingCancel";
+
+// ===== Payment Functions =====
+export { processCommission } from "./payments/processCommission";
+
+// ===== Scheduled Reports =====
+export { generateDailyFinancialSummary } from "./reports/dailySummary";

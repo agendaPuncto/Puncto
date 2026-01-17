@@ -34,6 +34,11 @@ export interface Subscription {
     type: string;
     last4?: string;
   };
+  // Stripe subscription fields
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface FeatureFlags {
@@ -77,6 +82,9 @@ export interface CancellationPolicy {
   enabled: boolean;
   hoursBeforeService: number;
   penalty?: number;
+  refundPercent?: number; // Percentage to refund (0-100)
+  fullRefundHours?: number; // Hours before service for full refund
+  noRefundHours?: number; // Hours before service for no refund
 }
 
 export interface Settings {
@@ -161,6 +169,8 @@ export interface Professional {
   canBookOnline: boolean;
   bufferTimeBefore?: number;
   bufferTimeAfter?: number;
+  commissionPercent?: number;
+  stripeConnectAccountId?: string; // Stripe Connect account for commission splits
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
 }

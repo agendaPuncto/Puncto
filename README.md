@@ -952,23 +952,32 @@ firebase deploy --only functions:sendBookingReminder
 
 ## 🗺️ Roadmap
 
-### ✅ Phase 1: Foundation (Months 1-3)
-- [ ] Multi-tenant architecture
-- [ ] Subdomain routing
-- [ ] Public booking page
-- [ ] Firestore integration
-- [ ] Security rules
-- [ ] Personal calendar integration (.ics)
-- [ ] Real-time updates (Centrifugo)
-- [ ] WhatsApp/email reminders
+### ✅ Phase 1: Foundation (Months 1-3) - **COMPLETED**
+- [x] Multi-tenant architecture
+- [x] Subdomain routing
+- [x] Public booking page
+- [x] Firestore integration
+- [x] Security rules
+- [x] Personal calendar integration (.ics)
+- [x] Real-time updates (Centrifugo)
+- [x] WhatsApp/email reminders
+- [x] Admin dashboard (bookings, services, professionals, customers, analytics)
+- [x] Availability calculation logic
+- [x] Waitlist system
+- [x] React Query integration
+- [x] PWA configuration
 
-### 🔄 Phase 2: Payments (Months 4-6) - In Progress
-- [ ] Stripe integration (Checkout, Billing)
-- [ ] Payment at booking (deposit/full)
-- [ ] SaaS subscriptions management
-- [ ] Cancellation policies
-- [ ] Commission splits
-- [ ] Financial reports
+### ✅ Phase 2: Payments + Financial Reports (Months 4-6) - **COMPLETED**
+- [x] Stripe integration (Checkout, Billing, Payment Links)
+- [x] Payment at booking (deposit/full)
+- [x] Virtual POS (payment links) with QR codes
+- [x] SaaS subscriptions management (Stripe Billing)
+- [x] Cancellation policies with automatic refund calculation
+- [x] Commission splits (Stripe Connect)
+- [x] Financial reports (P&L, Cash Flow)
+- [x] Bank reconciliation (OFX/CSV import)
+- [x] Internal ledger (double-entry bookkeeping)
+- [x] Accounting integrations (SPED export API endpoint)
 
 ### 📅 Phase 3: Restaurant + ERP (Months 7-10)
 - [ ] Digital menu with QR codes

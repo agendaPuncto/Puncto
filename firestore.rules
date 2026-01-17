@@ -102,6 +102,39 @@ service cloud.firestore {
                        hasPermission(businessId, 'manageBookings') ||
                        isPlatformAdmin();
       }
+
+      match /payments/{paymentId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
+      match /paymentLinks/{linkId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
+      match /ledgerEntries/{entryId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
+      match /commissions/{commissionId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) || isPlatformAdmin();
+      }
+
+      match /bankTransactions/{transactionId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
     }
 
     match /users/{userId} {

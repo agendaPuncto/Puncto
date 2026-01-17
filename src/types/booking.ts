@@ -34,6 +34,13 @@ export interface Booking {
   status: BookingStatus;
   price: number;
   currency: string;
+  // Payment fields
+  paymentId?: string;
+  paymentStatus?: 'pending' | 'processing' | 'succeeded' | 'failed' | 'refunded';
+  amountPaid?: number;
+  depositAmount?: number;
+  requiresPayment?: boolean;
+  // End payment fields
   notes?: string;
   reminders: Reminders;
   cancelledAt?: Timestamp | Date;

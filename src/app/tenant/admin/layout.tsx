@@ -17,6 +17,8 @@ const adminNavItems = [
   { href: '/tenant/admin/services', label: 'Serviços', icon: '🏥' },
   { href: '/tenant/admin/professionals', label: 'Profissionais', icon: '👥' },
   { href: '/tenant/admin/customers', label: 'Clientes', icon: '👤' },
+  { href: '/tenant/admin/payments', label: 'Pagamentos', icon: '💳' },
+  { href: '/tenant/admin/financial', label: 'Financeiro', icon: '💰' },
   { href: '/tenant/admin/settings', label: 'Configurações', icon: '⚙️' },
 ];
 
