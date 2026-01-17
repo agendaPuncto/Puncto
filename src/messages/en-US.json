@@ -1,0 +1,64 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "bookings": "Bookings",
+    "services": "Services",
+    "professionals": "Professionals",
+    "customers": "Customers",
+    "payments": "Payments",
+    "financial": "Financial",
+    "menu": "Menu",
+    "orders": "Orders",
+    "tables": "Tables",
+    "inventory": "Inventory",
+    "purchases": "Purchases",
+    "timeClock": "Time Clock",
+    "loyalty": "Loyalty",
+    "campaigns": "Campaigns",
+    "franchise": "Franchise",
+    "settings": "Settings",
+    "adminPanel": "Admin Panel",
+    "backToPublic": "Back to public site"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview of the last 30 days",
+    "totalBookings": "Total Bookings",
+    "occupancyRate": "Occupancy Rate",
+    "totalRevenue": "Total Revenue",
+    "attendanceRate": "Attendance Rate",
+    "confirmedBookings": "Confirmed",
+    "completedBookings": "Completed",
+    "cancelledBookings": "Cancelled",
+    "noShows": "No Shows",
+    "pendingBookings": "Pending"
+  },
+  "business": {
+    "suspendedAccount": "Suspended Account",
+    "suspendedMessage": "This account is currently suspended. Please contact support for more information."
+  },
+  "locale": {
+    "switch": "Language",
+    "portuguese": "Português",
+    "english": "English",
+    "spanish": "Español"
+  }
+}

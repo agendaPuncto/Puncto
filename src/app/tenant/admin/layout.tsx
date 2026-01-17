@@ -6,38 +6,39 @@ import Link from 'next/link';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { LocaleSwitcher } from '@/components/admin/LocaleSwitcher';
+import { useTranslations } from 'next-intl';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const adminNavItems = [
-  { href: '/tenant/admin/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/tenant/admin/bookings', label: 'Agendamentos', icon: '📅' },
-  { href: '/tenant/admin/services', label: 'Serviços', icon: '🏥' },
-  { href: '/tenant/admin/professionals', label: 'Profissionais', icon: '👥' },
-  { href: '/tenant/admin/customers', label: 'Clientes', icon: '👤' },
-  { href: '/tenant/admin/payments', label: 'Pagamentos', icon: '💳' },
-  { href: '/tenant/admin/financial', label: 'Financeiro', icon: '💰' },
-  // Phase 3: Restaurant Module
-  { href: '/tenant/admin/menu', label: 'Cardápio', icon: '🍽️' },
-  { href: '/tenant/admin/orders', label: 'Pedidos', icon: '📋' },
-  { href: '/tenant/admin/tables', label: 'Mesas', icon: '🪑' },
-  // Phase 3: ERP Module
-  { href: '/tenant/admin/inventory', label: 'Estoque', icon: '📦' },
-  { href: '/tenant/admin/purchases', label: 'Compras', icon: '🛒' },
-  // Phase 3: Time Clock
-  { href: '/tenant/admin/time-clock', label: 'Ponto', icon: '⏰' },
-  // Phase 3: CRM
-  { href: '/tenant/admin/loyalty', label: 'Fidelidade', icon: '🎁' },
-  { href: '/tenant/admin/campaigns', label: 'Campanhas', icon: '📢' },
-  { href: '/tenant/admin/settings', label: 'Configurações', icon: '⚙️' },
+// Navigation items will be translated in component
+const adminNavKeys = [
+  { href: '/tenant/admin/dashboard', key: 'dashboard', icon: '📊' },
+  { href: '/tenant/admin/bookings', key: 'bookings', icon: '📅' },
+  { href: '/tenant/admin/services', key: 'services', icon: '🏥' },
+  { href: '/tenant/admin/professionals', key: 'professionals', icon: '👥' },
+  { href: '/tenant/admin/customers', key: 'customers', icon: '👤' },
+  { href: '/tenant/admin/payments', key: 'payments', icon: '💳' },
+  { href: '/tenant/admin/financial', key: 'financial', icon: '💰' },
+  { href: '/tenant/admin/menu', key: 'menu', icon: '🍽️' },
+  { href: '/tenant/admin/orders', key: 'orders', icon: '📋' },
+  { href: '/tenant/admin/tables', key: 'tables', icon: '🪑' },
+  { href: '/tenant/admin/inventory', key: 'inventory', icon: '📦' },
+  { href: '/tenant/admin/purchases', key: 'purchases', icon: '🛒' },
+  { href: '/tenant/admin/time-clock', key: 'timeClock', icon: '⏰' },
+  { href: '/tenant/admin/loyalty', key: 'loyalty', icon: '🎁' },
+  { href: '/tenant/admin/campaigns', key: 'campaigns', icon: '📢' },
+  { href: '/tenant/admin/franchise', key: 'franchise', icon: '🏢' },
+  { href: '/tenant/admin/settings', key: 'settings', icon: '⚙️' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const { business } = useBusiness();
   const { user } = useAuth();
+  const t = useTranslations('nav');
 
   return (
     <ProtectedRoute allowedRoles={['owner', 'manager', 'professional']}>
@@ -46,11 +47,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <aside className="fixed left-0 top-0 h-full w-64 border-r border-neutral-200 bg-white">
           <div className="p-4 border-b border-neutral-200">
             <h1 className="text-xl font-semibold">{business?.displayName || 'Admin'}</h1>
-            <p className="text-sm text-neutral-600 mt-1">Painel Administrativo</p>
+            <p className="text-sm text-neutral-600 mt-1">{t('adminPanel')}</p>
           </div>
 
           <nav className="p-4 space-y-1">
-            {adminNavItems.map((item) => {
+            {adminNavKeys.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
               return (
                 <Link
@@ -63,7 +64,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span>{t(item.key)}</span>
                 </Link>
               );
             })}
@@ -72,9 +73,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-200">
             <div className="text-sm">
               <p className="font-medium">{user?.displayName || user?.email}</p>
-              <Link href="/tenant" className="text-blue-600 hover:underline text-xs">
-                Voltar ao site público
-              </Link>
+              <div className="flex items-center justify-between mt-2">
+                <Link href="/tenant" className="text-blue-600 hover:underline text-xs">
+                  {t('backToPublic')}
+                </Link>
+                <LocaleSwitcher />
+              </div>
             </div>
           </div>
         </aside>

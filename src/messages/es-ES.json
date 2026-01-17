@@ -1,0 +1,64 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "bookings": "Reservas",
+    "services": "Servicios",
+    "professionals": "Profesionales",
+    "customers": "Clientes",
+    "payments": "Pagos",
+    "financial": "Financiero",
+    "menu": "Menú",
+    "orders": "Pedidos",
+    "tables": "Mesas",
+    "inventory": "Inventario",
+    "purchases": "Compras",
+    "timeClock": "Reloj de Control",
+    "loyalty": "Fidelización",
+    "campaigns": "Campañas",
+    "franchise": "Franquicia",
+    "settings": "Configuración",
+    "adminPanel": "Panel de Administración",
+    "backToPublic": "Volver al sitio público"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "overview": "Resumen de los últimos 30 días",
+    "totalBookings": "Total de Reservas",
+    "occupancyRate": "Tasa de Ocupación",
+    "totalRevenue": "Ingresos Totales",
+    "attendanceRate": "Tasa de Asistencia",
+    "confirmedBookings": "Confirmados",
+    "completedBookings": "Completados",
+    "cancelledBookings": "Cancelados",
+    "noShows": "No se presentaron",
+    "pendingBookings": "Pendientes"
+  },
+  "business": {
+    "suspendedAccount": "Cuenta Suspendida",
+    "suspendedMessage": "Esta cuenta está actualmente suspendida. Por favor, contacte con soporte para más información."
+  },
+  "locale": {
+    "switch": "Idioma",
+    "portuguese": "Português",
+    "english": "English",
+    "spanish": "Español"
+  }
+}

@@ -21,6 +21,10 @@ export interface Branding {
   primaryColor?: string;
   secondaryColor?: string;
   gallery: string[];
+  // Phase 4: White-label customization
+  customCSS?: string;
+  faviconUrl?: string;
+  hidePunctoBranding?: boolean;
 }
 
 export interface Subscription {
@@ -110,7 +114,7 @@ export interface CancellationPolicy {
 
 export interface Settings {
   timezone: string;
-  locale: string;
+  locale: 'pt-BR' | 'en-US' | 'es-ES';
   currency: string;
   bookingWindow: number;
   cancellationPolicy: CancellationPolicy;
@@ -156,6 +160,17 @@ export interface Business {
   deletedAt?: Timestamp | Date;
   dataRetentionDays: number;
   consentVersion: string;
+  // Phase 4: Franchise management
+  isFranchiseGroup?: boolean;
+  franchiseGroupId?: string;
+  franchiseUnits?: string[]; // Array of business IDs that belong to this franchise group
+  marketplaceEnabled?: boolean; // If true, business appears in marketplace
+  marketplaceProfile?: {
+    description?: string;
+    tags?: string[];
+    featured?: boolean;
+    verified?: boolean;
+  };
 }
 
 export interface Location {

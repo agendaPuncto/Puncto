@@ -6,9 +6,11 @@ import { useMemo } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
+import { useTranslations } from 'next-intl';
 
 export default function AdminDashboardPage() {
   const { business } = useBusiness();
+  const t = useTranslations('dashboard');
   const today = new Date();
   const thirtyDaysAgo = subDays(today, 30);
   
@@ -66,10 +68,8 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-        <p className="text-neutral-600 mt-2">
-          Visão geral dos últimos 30 dias
-        </p>
+        <h1 className="text-3xl font-bold text-neutral-900">{t('title')}</h1>
+        <p className="text-neutral-600 mt-2">{t('overview')}</p>
       </div>
 
       <AnalyticsDashboard stats={stats} bookings={bookings || []} />

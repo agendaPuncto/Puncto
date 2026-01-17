@@ -1,0 +1,64 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Buscar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "yes": "Sim",
+    "no": "Não"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "bookings": "Agendamentos",
+    "services": "Serviços",
+    "professionals": "Profissionais",
+    "customers": "Clientes",
+    "payments": "Pagamentos",
+    "financial": "Financeiro",
+    "menu": "Cardápio",
+    "orders": "Pedidos",
+    "tables": "Mesas",
+    "inventory": "Estoque",
+    "purchases": "Compras",
+    "timeClock": "Ponto",
+    "loyalty": "Fidelidade",
+    "campaigns": "Campanhas",
+    "franchise": "Franquia",
+    "settings": "Configurações",
+    "adminPanel": "Painel Administrativo",
+    "backToPublic": "Voltar ao site público"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Visão geral dos últimos 30 dias",
+    "totalBookings": "Total de Agendamentos",
+    "occupancyRate": "Taxa de Ocupação",
+    "totalRevenue": "Receita Total",
+    "attendanceRate": "Taxa de Comparecimento",
+    "confirmedBookings": "Confirmados",
+    "completedBookings": "Concluídos",
+    "cancelledBookings": "Cancelados",
+    "noShows": "Não compareceu",
+    "pendingBookings": "Pendentes"
+  },
+  "business": {
+    "suspendedAccount": "Conta Suspensa",
+    "suspendedMessage": "Esta conta está atualmente suspensa. Entre em contato com o suporte para mais informações."
+  },
+  "locale": {
+    "switch": "Idioma",
+    "portuguese": "Português",
+    "english": "English",
+    "spanish": "Español"
+  }
+}

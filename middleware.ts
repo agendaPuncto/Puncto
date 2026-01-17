@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
@@ -84,7 +85,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Rewrite to /tenant/* routes with slug in header
-  return NextResponse.rewrite(
+  const response = NextResponse.rewrite(
     new URL(`/tenant${url.pathname}${url.search}`, request.url),
     {
       request: {
@@ -92,6 +93,12 @@ export function middleware(request: NextRequest) {
       },
     }
   );
+
+  // Set locale header for i18n (will be read by next-intl in server components)
+  // Locale will be determined from business settings in tenant layout
+  response.headers.set('x-locale', 'pt-BR'); // Default, will be overridden by business settings
+
+  return response;
 }
 
 export const config = {

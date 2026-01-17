@@ -92,3 +92,11 @@ export type {
   CampaignType,
   CampaignStatus,
 } from './crm';
+
+// Marketplace types
+export type {
+  MarketplaceProfessional,
+  MarketplaceEstablishment,
+  MarketplaceFilters,
+  MarketplaceSearchResult,
+} from './marketplace';

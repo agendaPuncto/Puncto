@@ -3,3 +3,30 @@
 @tailwind utilities;
 
 html, body { @apply bg-neutral-50 text-neutral-900; }
+
+/* Branding CSS variables - can be overridden by white-label customization */
+:root {
+  --brand-primary: #000000;
+  --brand-secondary: #666666;
+}
+
+/* Apply brand colors to buttons and links when available */
+.bg-brand-primary {
+  background-color: var(--brand-primary);
+}
+
+.text-brand-primary {
+  color: var(--brand-primary);
+}
+
+.border-brand-primary {
+  border-color: var(--brand-primary);
+}
+
+.bg-brand-secondary {
+  background-color: var(--brand-secondary);
+}
+
+.text-brand-secondary {
+  color: var(--brand-secondary);
+}

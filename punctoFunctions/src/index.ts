@@ -40,3 +40,6 @@ export { onOrderPaid } from "./triggers/onOrderPaid";
 export { checkInventoryAlerts } from "./scheduled/inventoryAlerts";
 export { sendBirthdayReminders } from "./scheduled/birthdayReminders";
 export { onClockIn } from "./triggers/onClockIn";
+
+// ===== Phase 4: Webhook Functions =====
+export { onWebhookDeliveryCreated } from "./webhooks/deliver";

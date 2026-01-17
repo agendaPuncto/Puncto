@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Booking } from '@/types/booking';
 import { format, subDays } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 interface AnalyticsDashboardProps {
   stats: {
