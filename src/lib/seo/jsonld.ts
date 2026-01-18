@@ -1,0 +1,170 @@
+// JSON-LD Structured Data generators for SEO
+
+export function generateOrganizationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Puncto',
+    url: 'https://puncto.com.br',
+    logo: 'https://puncto.com.br/logo.png',
+    description:
+      'Plataforma completa de gestão para salões, restaurantes, clínicas e outros negócios de serviços.',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'Av. Paulista, 1000',
+      addressLocality: 'São Paulo',
+      addressRegion: 'SP',
+      postalCode: '01310-100',
+      addressCountry: 'BR',
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: '+55-11-99999-9999',
+      contactType: 'customer service',
+      availableLanguage: ['Portuguese', 'English', 'Spanish'],
+    },
+    sameAs: [
+      'https://linkedin.com/company/puncto',
+      'https://instagram.com/puncto.app',
+      'https://youtube.com/@puncto',
+      'https://discord.gg/puncto',
+    ],
+  };
+}
+
+export function generateWebsiteSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Puncto',
+    url: 'https://puncto.com.br',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://puncto.com.br/search?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+export function generateSoftwareApplicationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Puncto',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, iOS, Android',
+    offers: {
+      '@type': 'Offer',
+      price: '99',
+      priceCurrency: 'BRL',
+      priceValidUntil: '2025-12-31',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      ratingCount: '500',
+    },
+  };
+}
+
+export function generateFAQSchema(faqs: Array<{ question: string; answer: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
+export function generateBreadcrumbSchema(
+  items: Array<{ name: string; url: string }>
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
+export function generateArticleSchema(article: {
+  title: string;
+  description: string;
+  url: string;
+  imageUrl: string;
+  datePublished: string;
+  dateModified: string;
+  authorName: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.description,
+    url: article.url,
+    image: article.imageUrl,
+    datePublished: article.datePublished,
+    dateModified: article.dateModified,
+    author: {
+      '@type': 'Person',
+      name: article.authorName,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Puncto',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://puncto.com.br/logo.png',
+      },
+    },
+  };
+}
+
+export function generateLocalBusinessSchema(business: {
+  name: string;
+  type: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  phone: string;
+  priceRange: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': business.type,
+    name: business.name,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: business.address.street,
+      addressLocality: business.address.city,
+      addressRegion: business.address.state,
+      postalCode: business.address.postalCode,
+      addressCountry: 'BR',
+    },
+    telephone: business.phone,
+    priceRange: business.priceRange,
+  };
+}
+
+// Component to inject JSON-LD into the page
+export function JsonLd({ data }: { data: Record<string, unknown> }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}

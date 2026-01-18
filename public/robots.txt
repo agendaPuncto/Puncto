@@ -1,0 +1,23 @@
+# Robots.txt for Puncto
+# https://puncto.com.br
+
+User-agent: *
+Allow: /
+
+# Disallow private and API routes
+Disallow: /api/
+Disallow: /tenant/
+Disallow: /auth/
+Disallow: /platform/
+Disallow: /_next/
+Disallow: /private/
+
+# Allow specific crawlers full access
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemap location
+Sitemap: https://puncto.com.br/sitemap.xml

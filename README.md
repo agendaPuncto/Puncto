@@ -963,73 +963,328 @@ firebase deploy --only functions:sendBookingReminder
 
 ## 🗺️ Roadmap
 
-**Status Summary:** Phases 1-4 have been successfully completed. All core features, APIs, integrations, and scale features are implemented and operational. Phase 5 (Delivery Platform) is planned for future development.
+**Status Summary:** Phases 1-5 have been successfully completed. All core features, APIs, integrations, scale features, and marketing website are implemented and operational. Phases 6, 7, and 8 are planned for future development.
+
+---
 
 ### ✅ Phase 1: Foundation (Months 1-3) - **COMPLETED**
-- [x] Multi-tenant architecture
-- [x] Subdomain routing
-- [x] Public booking page
-- [x] Firestore integration
-- [x] Security rules
-- [x] Personal calendar integration (.ics)
-- [x] Real-time updates (Centrifugo)
-- [x] WhatsApp/email reminders
-- [x] Admin dashboard (bookings, services, professionals, customers, analytics)
-- [x] Availability calculation logic
-- [x] Waitlist system
-- [x] React Query integration
-- [x] PWA configuration
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Multi-tenant architecture | ✅ | Subdomain-based routing with tenant detection |
+| Subdomain routing | ✅ | `middleware.ts` with `?subdomain=` fallback |
+| Public booking page | ✅ | `src/app/tenant/page.tsx`, `BookingPublicPage.tsx` |
+| Firestore integration | ✅ | `src/lib/firebase.ts`, `firebaseAdmin.ts` |
+| Security rules | ✅ | `firestore.rules` with RBAC |
+| Personal calendar integration (.ics) | ✅ | `src/lib/calendar/ics.ts`, `AddToCalendar.tsx` |
+| Real-time updates (Centrifugo) | ✅ | `src/lib/centrifugo/`, `CentrifugoProvider.tsx` |
+| WhatsApp/email reminders | ✅ | `src/lib/messaging/`, Firebase Functions |
+| Admin dashboard | ✅ | `src/app/tenant/admin/` (bookings, services, professionals, customers, analytics) |
+| Availability calculation | ✅ | `src/lib/utils/slots.ts`, `useAvailability.ts` |
+| Waitlist system | ✅ | `/api/waitlist/route.ts` |
+| React Query integration | ✅ | `src/lib/queries/`, `QueryProvider.tsx` |
+| PWA configuration | ✅ | `public/manifest.json` |
+
+---
 
 ### ✅ Phase 2: Payments + Financial Reports (Months 4-6) - **COMPLETED**
-- [x] Stripe integration (Checkout, Billing, Payment Links)
-- [x] Payment at booking (deposit/full)
-- [x] Virtual POS (payment links) with QR codes
-- [x] SaaS subscriptions management (Stripe Billing)
-- [x] Cancellation policies with automatic refund calculation
-- [x] Commission splits (Stripe Connect)
-- [x] Financial reports (P&L, Cash Flow)
-- [x] Bank reconciliation (OFX/CSV import)
-- [x] Internal ledger (double-entry bookkeeping)
-- [x] Accounting integrations (SPED export API endpoint)
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Stripe integration | ✅ | `src/lib/stripe/` (Checkout, Billing, Payment Links) |
+| Payment at booking | ✅ | `PaymentStep.tsx`, `/api/payments/create-checkout/` |
+| Virtual POS with QR codes | ✅ | `PaymentLinkForm.tsx`, `/api/payments/create-payment-link/` |
+| SaaS subscriptions | ✅ | `src/lib/stripe/subscriptions.ts`, `/api/subscriptions/` |
+| Cancellation policies | ✅ | `src/lib/stripe/refunds.ts`, automatic refund calculation |
+| Commission splits (Stripe Connect) | ✅ | `src/lib/stripe/connect.ts`, `/api/stripe-connect/` |
+| Financial reports (P&L, Cash Flow) | ✅ | `/api/reports/pnl/`, `/api/reports/cashflow/` |
+| Bank reconciliation | ✅ | `/api/reconciliation/import/` (OFX/CSV) |
+| Internal ledger | ✅ | `src/lib/ledger/entries.ts` (double-entry bookkeeping) |
+| Accounting integrations | ✅ | `/api/accounting/sped-export/` |
+
+---
 
 ### ✅ Phase 3: Restaurant + ERP (Months 7-10) - **COMPLETED**
-- [x] Digital menu with QR codes
-- [x] Table ordering (PWA with cart system)
-- [x] Real-time virtual tab (kitchen + waiter + customer views)
-- [x] Split payments (equal, by-item, custom)
-- [x] Electronic time clock (PIN/biometric, breaks, geolocation)
-- [x] Inventory management (stock tracking, movements, low stock alerts)
-- [x] Purchases & suppliers (purchase orders, receiving workflow)
-- [x] Cost per dish (CSP) and recipe management
-- [x] Cost centers & budgets
-- [x] Tax invoices (NFC-e generation with TecnoSpeed/eNotas/PlugNotas integration)
-- [x] Thermal printer integration (ESC/POS for kitchen orders)
-- [x] Time bank & overtime calculation (Brazilian law compliance)
-- [x] Attendance reports & payroll export (CSV/Excel)
-- [x] CRM & customer segmentation
-- [x] Loyalty programs (points, cashback, tier-based rewards)
-- [x] Targeted campaigns (email, WhatsApp, SMS, push)
-- [x] Birthday reminders (automated campaigns)
+
+**Restaurant/Café Module:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Digital menu with QR codes | ✅ | `src/app/tenant/admin/menu/`, `QRCodeGenerator.tsx` |
+| Table ordering (PWA) | ✅ | `src/app/tenant/table/[tableId]/`, `useCart.ts`, `CartDrawer.tsx` |
+| Real-time virtual tab | ✅ | `VirtualTab.tsx`, `KitchenQueue.tsx`, Centrifugo channels |
+| Split payments | ✅ | `SplitPaymentModal.tsx`, `/api/orders/[orderId]/split/` |
+| Order status tracking | ✅ | `/api/orders/[orderId]/status/`, `/api/orders/[orderId]/items/[itemIndex]/status/` |
+| Thermal printer integration | ✅ | `src/lib/printing/thermal.ts` (ESC/POS) |
+| NFC-e tax invoices | ✅ | `src/lib/tax/nfce.ts`, `/api/tax/nfce/generate/` |
+
+**ERP Module:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Inventory management | ✅ | `src/app/tenant/admin/inventory/`, `/api/inventory/` |
+| Purchases & suppliers | ✅ | `src/app/tenant/admin/purchases/`, `/api/purchases/`, `/api/suppliers/` |
+| Cost per dish (CSP) | ✅ | `src/lib/erp/costCalculation.ts`, `/api/recipes/` |
+| Cost centers & budgets | ✅ | `/api/budgets/` |
+
+**Time Clock Module:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Clock in/out (PIN/biometric) | ✅ | `src/app/tenant/time-clock/`, `/api/time-clock/clock/` |
+| Break tracking | ✅ | `src/types/timeClock.ts`, clock API |
+| Geolocation support | ✅ | Location capture in clock-in |
+| Shift management | ✅ | `/api/time-clock/shifts/` |
+| Time bank & overtime | ✅ | `src/lib/time-clock/calculations.ts` (Brazilian law) |
+| Attendance reports | ✅ | `/api/time-clock/reports/` (CSV/Excel export) |
+
+**CRM & Marketing Module:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Customer segmentation | ✅ | `src/lib/crm/segmentation.ts`, `/api/crm/segments/` |
+| Loyalty programs | ✅ | `src/app/tenant/admin/loyalty/`, `/api/loyalty/` |
+| Targeted campaigns | ✅ | `src/app/tenant/admin/campaigns/`, `/api/campaigns/` |
+| Birthday reminders | ✅ | `src/lib/crm/birthdays.ts`, Firebase scheduled function |
+
+**Firebase Functions (Phase 3):**
+| Function | Status | Trigger |
+|----------|--------|---------|
+| `onOrderCreate` | ✅ | Auto-print, inventory update, real-time publish |
+| `onOrderPaid` | ✅ | NFC-e generation, loyalty points |
+| `onClockIn` | ✅ | Shift validation |
+| `checkInventoryAlerts` | ✅ | Daily scheduled (low stock alerts) |
+| `sendBirthdayReminders` | ✅ | Daily scheduled |
+
+---
 
 ### ✅ Phase 4: Scale (Months 11-14) - **COMPLETED**
-- [x] Multi-language support (pt-BR, en-US, es-ES) with next-intl
-- [x] Locale switcher component and i18n configuration
-- [x] Public REST API v1 (bookings, services endpoints with authentication)
-- [x] GraphQL API (Apollo Server with schema and resolvers)
-- [x] API key management (generation, rotation, expiration)
-- [x] API authentication middleware
-- [x] Webhooks for third-party integrations (registration, management, testing)
-- [x] Advanced BI dashboards (customizable dashboards API)
-- [x] Analytics dashboard component with charts and visualizations
-- [x] Franchise management (create groups, add units, aggregated metrics dashboard)
-- [x] Professional/establishment marketplace (search, filters, discovery UI)
-- [x] White-label (branding customization UI, custom CSS, favicon, hide branding option)
 
-### 🚚 Phase 5: Delivery (15+ months)
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Multi-language (pt-BR, en-US, es-ES) | ✅ | `src/i18n/`, `src/messages/`, next-intl |
+| Locale switcher | ✅ | `LocaleSwitcher.tsx` |
+| Public REST API v1 | ✅ | `/api/v1/bookings/`, `/api/v1/services/` |
+| GraphQL API | ✅ | `/api/graphql/`, `src/lib/graphql/` (Apollo Server) |
+| API key management | ✅ | `/api/api-keys/`, `src/lib/api/authentication.ts` |
+| API authentication middleware | ✅ | `src/lib/api/middleware.ts` |
+| Rate limiting | ✅ | `src/lib/api/rateLimiting.ts` |
+| Webhooks system | ✅ | `/api/webhooks/register/`, `/api/webhooks/test/`, `onWebhookDeliveryCreated` |
+| Advanced BI dashboards | ✅ | `/api/dashboards/`, `AnalyticsDashboard.tsx` |
+| Franchise management | ✅ | `src/app/tenant/admin/franchise/`, `/api/franchise/` |
+| Marketplace | ✅ | `src/app/marketplace/`, `/api/marketplace/` |
+| White-label branding | ✅ | `/api/branding/`, `BrandingProvider.tsx`, `BrandingWrapper.tsx` |
+
+**Pending Enhancements:**
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Multi-region architecture | ⚠️ | Planned for high-scale deployment |
+| Public API SDK (JS/Python) | ⚠️ | Planned |
+| Comprehensive API docs | ⚠️ | In progress |
+
+---
+
+### ✅ Phase 5: Marketing Website & Brand - **COMPLETED**
+
+**Website & Landing Pages:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Brand guidelines | ✅ | `src/lib/brand/guidelines.ts` (colors, typography, spacing) |
+| Landing page | ✅ | `src/app/(marketing)/page.tsx` with Hero, Features, Testimonials |
+| Pricing page | ✅ | `src/app/(marketing)/pricing/page.tsx` |
+| Industry pages | ✅ | `src/app/(marketing)/industries/[slug]/` (salons, restaurants, clinics, bakeries) |
+| Features page | ✅ | `src/app/(marketing)/features/page.tsx` |
+| About page | ✅ | `src/app/(marketing)/about/page.tsx` |
+| Contact page | ✅ | `src/app/(marketing)/contact/page.tsx` |
+| Blog | ✅ | `src/app/(marketing)/blog/`, `src/content/blog.ts` |
+| Legal pages | ✅ | `/legal/terms/`, `/legal/privacy/`, `/legal/lgpd/`, `/legal/cookies/` |
+| Press/Media kit | ✅ | `src/app/(marketing)/press/page.tsx` |
+
+**Lead Generation:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Lead capture forms | ✅ | `LeadCaptureForm.tsx`, `/api/contact/`, `/api/demo-request/` |
+| Newsletter subscription | ✅ | `/api/newsletter/` |
+| Demo request page | ✅ | `src/app/(marketing)/demo/page.tsx` |
+| Exit-intent popups | ✅ | `ExitIntentPopup.tsx` |
+| CTA sections | ✅ | `CTASection.tsx` |
+
+**Analytics & Tracking:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Google Analytics 4 | ✅ | `GoogleAnalytics.tsx` |
+| Facebook Pixel | ✅ | `FacebookPixel.tsx` |
+| Hotjar heatmaps | ✅ | `HotjarAnalytics.tsx` |
+| LinkedIn Insight Tag | ✅ | `LinkedInInsightTag.tsx` |
+| A/B testing framework | ✅ | `src/lib/ab-testing/index.ts` |
+| Conversion tracking | ✅ | Event tracking functions |
+
+**SEO:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| JSON-LD structured data | ✅ | `src/lib/seo/jsonld.ts` |
+| Sitemap | ✅ | `next-sitemap.config.js` |
+| robots.txt | ✅ | `public/robots.txt` |
+| Meta tags & Open Graph | ✅ | Metadata on all pages |
+
+**Marketing Components:**
+| Component | Status | File |
+|-----------|--------|------|
+| Hero | ✅ | `Hero.tsx` |
+| FeatureCard | ✅ | `FeatureCard.tsx` |
+| PricingCard | ✅ | `PricingCard.tsx` |
+| TestimonialCard/Carousel | ✅ | `TestimonialCard.tsx`, `TestimonialCarousel.tsx` |
+| FAQAccordion | ✅ | `FAQAccordion.tsx` |
+| CustomerLogos | ✅ | `CustomerLogos.tsx` |
+| StatsCounter | ✅ | `StatsCounter.tsx` |
+| TrustBadges | ✅ | `TrustBadges.tsx` |
+| ReviewWidgets | ✅ | `ReviewWidgets.tsx` |
+| CertificationBadges | ✅ | `CertificationBadges.tsx` |
+| CookieConsent | ✅ | `CookieConsent.tsx` |
+| VideoPlayer | ✅ | `VideoPlayer.tsx` |
+| Header/Footer | ✅ | `Header.tsx`, `Footer.tsx` |
+
+**Integrations:**
+| Integration | Status | Implementation |
+|-------------|--------|----------------|
+| HubSpot CRM | ✅ | `src/lib/integrations/hubspot.ts` |
+| SendGrid email | ✅ | `src/lib/integrations/sendgrid.ts` |
+
+**Video Content:**
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Videos page | ✅ | `src/app/(marketing)/videos/page.tsx` |
+| Webinars page | ✅ | `src/app/(marketing)/webinars/page.tsx` |
+| Resources page | ✅ | `src/app/(marketing)/resources/page.tsx` |
+
+**Pending (Optional Enhancements):**
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Logo design | ⏳ | Requires design work |
+| Google Business Profile | ⏳ | Local SEO setup pending |
+| Explainer animations | ⏳ | Pending design assets |
+| Video testimonials | ⏳ | Pending recordings |
+| YouTube channel | ⏳ | Pending setup |
+
+### 🏨 Phase 6: Hospitality Platform (Future)
+- [ ] Property listings (hotels, pousadas, vacation rentals, hostels)
+- [ ] Multi-property management for chains
+- [ ] Room/unit type configuration
+- [ ] Floor plans and visual maps
+- [ ] Property amenities catalog
+- [ ] Real-time availability calendar
+- [ ] Instant booking and booking requests
+- [ ] Multi-channel booking engine
+- [ ] Group reservations
+- [ ] Dynamic pricing engine
+- [ ] Seasonal rates and promotions
+- [ ] Channel manager integration (Booking.com, Airbnb, Expedia)
+- [ ] Guest portal and mobile app
+- [ ] Digital check-in/check-out
+- [ ] Digital room keys (smart lock integration)
+- [ ] In-room service requests
+- [ ] Digital concierge
+- [ ] Guest communication hub
+- [ ] Review and rating system
+- [ ] Housekeeping management
+- [ ] Room status tracking
+- [ ] Maintenance request system
+- [ ] Staff scheduling
+- [ ] Inventory management (linens, amenities)
+- [ ] Laundry tracking
+- [ ] Dynamic pricing algorithms
+- [ ] Deposit collection and refunds
+- [ ] Extras and upsells
+- [ ] Multi-currency support
+- [ ] Channel commission tracking
+- [ ] Revenue management reports (ADR, RevPAR, occupancy)
+- [ ] OTA synchronization
+- [ ] Direct booking website
+- [ ] Booking widget
+- [ ] Meta-search integration (Google Hotels, Trivago)
+- [ ] Rate parity monitoring
+
+### 🚚 Phase 7: Delivery (Future)
 - [ ] Own delivery platform
-- [ ] Driver app
-- [ ] GPS tracking
+- [ ] Real-time driver tracking (GPS)
 - [ ] Route optimization
+- [ ] Driver app
+- [ ] Commission management
+- [ ] Gamification system
+
+### 🚗 Phase 8: Ride-Hailing Platform (Future)
+- [ ] Multi-city ride-hailing platform
+- [ ] Driver and rider mobile apps
+- [ ] Real-time GPS tracking and navigation
+- [ ] Intelligent driver-rider matching algorithm
+- [ ] Multiple vehicle categories (economy, comfort, premium, XL)
+- [ ] Instant ride requests
+- [ ] Scheduled rides (advance booking)
+- [ ] Shared rides (carpool) with route optimization
+- [ ] Multi-stop rides
+- [ ] Ride estimation (price, time, distance)
+- [ ] Real-time ride status updates
+- [ ] In-app chat between driver and rider
+- [ ] SOS emergency button with location sharing
+- [ ] Driver onboarding and verification (background checks, documents)
+- [ ] Driver dashboard (earnings, trips, performance)
+- [ ] Shift management (online/offline status)
+- [ ] Acceptance rate and cancellation tracking
+- [ ] Driver ratings and feedback system
+- [ ] Vehicle inspection and documentation
+- [ ] Earnings withdrawal system
+- [ ] Driver incentives and bonuses
+- [ ] Dynamic pricing (surge pricing during high demand)
+- [ ] Distance and time-based fare calculation
+- [ ] Multiple payment methods (PIX, cards, cash, wallet)
+- [ ] Automatic fare splitting among riders
+- [ ] Toll and parking fee handling
+- [ ] Tipping system
+- [ ] Promo codes and referral discounts
+- [ ] Invoice generation for corporate accounts
+- [ ] Real-time ride monitoring and alerts
+- [ ] Emergency contact integration
+- [ ] Ride sharing (share trip details with contacts)
+- [ ] Driver and vehicle verification system
+- [ ] Insurance integration
+- [ ] Incident reporting and resolution
+- [ ] LGPD compliance for personal data
+- [ ] Audio recording (optional, for safety)
+- [ ] Partner with fleet owners
+- [ ] Vehicle assignment and tracking
+- [ ] Maintenance scheduling
+- [ ] Fuel consumption tracking
+- [ ] Vehicle availability management
+- [ ] Corporate fleet solutions
+- [ ] Heat maps for demand prediction
+- [ ] Driver performance analytics
+- [ ] Revenue reports (per driver, per region, per vehicle type)
+- [ ] Ride completion rates
+- [ ] Peak hours analysis
+- [ ] Customer retention metrics
+- [ ] Churn prediction
+- [ ] Rider profile and preferences
+- [ ] Favorite locations
+- [ ] Ride history and receipts
+- [ ] Lost and found system
+- [ ] Customer support chat/tickets
+- [ ] Rating and review system
+- [ ] Loyalty program (points, discounts)
+- [ ] Accessibility features (wheelchair-accessible vehicles)
+- [ ] Business accounts for companies
+- [ ] Expense management and reporting
+- [ ] Employee ride credits
+- [ ] Monthly invoicing
+- [ ] Centralized billing
+- [ ] Driver mobile app (React Native)
+- [ ] Rider mobile app (React Native)
+- [ ] Real-time geolocation and mapping (Google Maps, Mapbox)
+- [ ] Route optimization algorithms
+- [ ] Matching algorithm (distance, ratings, vehicle type)
+- [ ] Push notifications for ride updates
+- [ ] WebSocket for real-time location tracking
+- [ ] ML models for demand forecasting and surge pricing
+- [ ] Background location tracking (battery-optimized)
+- [ ] Offline mode for drivers
+- [ ] Admin dashboard for operations team
+- [ ] Fraud detection system
+- [ ] Integration with traffic APIs (real-time traffic data)
 
 ---
 

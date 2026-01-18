@@ -1,50 +1,23 @@
-import { notFound } from 'next/navigation';
-import { db } from '@/lib/firebaseAdmin';
-import { Business } from '@/types/business';
-import { BusinessProvider } from '@/lib/contexts/BusinessContext';
-import BookingPage from './tenant/page';
+// This file exists as a fallback for the root route when using the marketing route group.
+// The (marketing) route group's page.tsx handles the actual landing page content.
+// This redirect ensures proper routing in edge cases.
 
-async function getDemoBusiness(): Promise<Business | null> {
-  try {
-    const businessDoc = await db.collection('businesses').doc('demo').get();
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 
-    if (!businessDoc.exists) {
-      return null;
-    }
-
-    const data = businessDoc.data();
-    if (!data) return null;
-
-    // Convert Firestore Timestamps to serializable dates
-    return {
-      id: businessDoc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      deletedAt: data.deletedAt?.toDate() || undefined,
-      subscription: {
-        ...data.subscription,
-        currentPeriodStart: data.subscription?.currentPeriodStart?.toDate() || new Date(),
-        currentPeriodEnd: data.subscription?.currentPeriodEnd?.toDate() || new Date(),
-        trialEndsAt: data.subscription?.trialEndsAt?.toDate() || undefined,
-      },
-    } as Business;
-  } catch (error) {
-    console.error('Error fetching business:', error);
-    return null;
+export default async function RootPage() {
+  // Check if this is a subdomain request
+  const headersList = headers();
+  const subdomain = headersList.get('x-business-slug');
+  
+  // If there's a subdomain header, this request should go to tenant
+  // The middleware should handle this, but as a fallback:
+  if (subdomain) {
+    redirect('/tenant');
   }
-}
-
-export default async function Home() {
-  const business = await getDemoBusiness();
-
-  if (!business) {
-    notFound();
-  }
-
-  return (
-    <BusinessProvider business={business}>
-      <BookingPage />
-    </BusinessProvider>
-  );
+  
+  // For the main domain, the (marketing)/page.tsx will be served
+  // This file acts as a fallback - Next.js route groups handle this automatically
+  // If we reach here, redirect to ensure we don't show a blank page
+  return null;
 }

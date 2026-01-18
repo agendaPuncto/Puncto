@@ -52,8 +52,24 @@ export function middleware(request: NextRequest) {
   // Main domain (marketing site)
   if (!subdomain || subdomain === 'www' || hostname === 'puncto.com.br') {
     // Allow marketing routes to pass through
+    // Marketing pages are in (marketing) route group
     console.log('[Middleware] No subdomain or www/main domain, passing through to marketing site');
     return NextResponse.next();
+  }
+
+  // Handle demo subdomain for testing the booking page
+  if (subdomain === 'demo') {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-business-slug', 'demo');
+    
+    return NextResponse.rewrite(
+      new URL(`/tenant${url.pathname}${url.search}`, request.url),
+      {
+        request: {
+          headers: requestHeaders,
+        },
+      }
+    );
   }
 
   console.log('[Middleware] Business subdomain detected:', subdomain, '- rewriting to /tenant');
