@@ -58,12 +58,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userData = { id: userDoc.id, ...userDoc.data() } as User;
             setUser(userData);
 
-            // Parse custom claims from token
+            // Parse custom claims from token - STRICT USER TYPE ENFORCEMENT
             const tokenResult = await firebaseUser.getIdTokenResult();
             const claims = tokenResult.claims;
 
-            setIsPlatformAdmin(claims.platformAdmin === true);
-            setBusinessRoles((claims.businessRoles as Record<string, 'owner' | 'manager' | 'professional'>) || {});
+            // Validate user type matches Firestore document
+            const userType = claims.userType || userData.type;
+            if (userType !== userData.type) {
+              console.warn('[AuthContext] User type mismatch between JWT and Firestore:', {
+                jwt: userType,
+                firestore: userData.type,
+              });
+            }
+
+            // Set platform admin flag (only if userType is platform_admin)
+            const isPlatformAdminUser =
+              (claims.userType === 'platform_admin' || userData.type === 'platform_admin') &&
+              claims.platformAdmin === true;
+            setIsPlatformAdmin(isPlatformAdminUser);
+
+            // Set business roles (only if userType is business_user)
+            const businessRolesData =
+              (claims.userType === 'business_user' || userData.type === 'business_user')
+                ? (claims.businessRoles as Record<string, 'owner' | 'manager' | 'professional'>) || {}
+                : {};
+            setBusinessRoles(businessRolesData);
           } else {
             // User document doesn't exist yet (might be creating)
             setUser(null);

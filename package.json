@@ -8,8 +8,10 @@
     "postbuild": "next-sitemap",
     "start": "next start",
     "lint": "next lint",
-    "seed": "ts-node scripts/seed.ts",
-    "set-admin": "ts-node scripts/set-admin.ts"
+    "seed": "tsx scripts/seed.ts",
+    "set-admin": "tsx scripts/set-admin.ts",
+    "create-admin": "tsx scripts/create-platform-admin.ts",
+    "upgrade-admin": "tsx scripts/upgrade-to-admin.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.2.0",
@@ -50,6 +52,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.10",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.2"
   }
 }

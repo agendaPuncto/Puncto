@@ -1,6 +1,12 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type UserType = 'customer' | 'staff' | 'platform_admin';
+/**
+ * User Type defines the authentication domain
+ * - platform_admin: SaaS team managing the platform
+ * - business_user: Business owners, managers, staff
+ * - customer: End users (booking, ordering, etc.)
+ */
+export type UserType = 'platform_admin' | 'business_user' | 'customer';
 
 export interface Dependent {
   id: string;
@@ -14,19 +20,37 @@ export interface UserPreferences {
   timezone: string;
 }
 
+/**
+ * Firebase Custom Claims for authentication and authorization
+ * These are set server-side and included in the JWT token
+ */
 export interface CustomClaims {
+  // User type for authentication domain separation
+  userType: UserType;
+
+  // Platform admin access (only for platform_admin userType)
   platformAdmin?: boolean;
+  platformRole?: 'super_admin' | 'support' | 'analyst';
+
+  // Business user access (only for business_user userType)
   businessRoles?: {
     [businessId: string]: 'owner' | 'manager' | 'professional';
   };
+  primaryBusinessId?: string; // The main business for this user
+
+  // Customer metadata (only for customer userType)
+  customerId?: string;
 }
 
+/**
+ * Base User interface - stored in Firestore /users/{userId}
+ */
 export interface User {
   id: string;
   email: string;
   displayName?: string;
   photoURL?: string;
-  type: UserType;
+  type: UserType; // Critical: determines authentication domain
   customClaims: CustomClaims;
   phone?: string;
   preferences: UserPreferences;
@@ -35,6 +59,12 @@ export interface User {
   lastLoginAt: Timestamp | Date;
   consentVersion?: string;
   marketingConsent?: boolean;
+
+  // Business user specific fields
+  primaryBusinessId?: string; // Set only if type === 'business_user'
+
+  // Customer specific fields
+  loyaltyPoints?: number; // Set only if type === 'customer'
 }
 
 export interface PlatformAdmin {

@@ -3,8 +3,14 @@
  * Usage: npm run set-admin email@example.com
  */
 
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import * as readline from 'readline';
-import { auth } from '../src/lib/firebaseAdmin';
+
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
+
+import { auth } from '../src/lib/firebaseAdmin.ts';
 
 const rl = readline.createInterface({
   input: process.stdin,

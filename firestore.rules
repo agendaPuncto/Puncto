@@ -2,26 +2,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper functions - USER TYPE ENFORCEMENT
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    function getUserType() {
+      return request.auth.token.userType;
+    }
+
     function isPlatformAdmin() {
       return isAuthenticated() &&
+             getUserType() == 'platform_admin' &&
              request.auth.token.platformAdmin == true;
     }
 
-    function isBusinessOwner(businessId) {
+    function isBusinessUser() {
       return isAuthenticated() &&
+             getUserType() == 'business_user';
+    }
+
+    function isCustomer() {
+      return isAuthenticated() &&
+             getUserType() == 'customer';
+    }
+
+    function isBusinessOwner(businessId) {
+      return isBusinessUser() &&
              request.auth.token.businessRoles != null &&
              request.auth.token.businessRoles[businessId] == 'owner';
     }
 
     function isBusinessStaff(businessId) {
-      return isAuthenticated() &&
-             request.auth.token.businessRoles != null &&
-             request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional'];
+      return (isPlatformAdmin()) ||
+             (isBusinessUser() &&
+              request.auth.token.businessRoles != null &&
+              request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional']);
     }
 
     function hasPermission(businessId, permission) {
@@ -251,11 +267,25 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Users can read/write their own document
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // Users can read their own document
+      allow read: if isAuthenticated() && request.auth.uid == userId;
 
-      // Platform admins can read all
+      // Users can update their own document, but CANNOT change userType
+      allow update: if isAuthenticated() &&
+                      request.auth.uid == userId &&
+                      request.resource.data.type == resource.data.type && // Prevent userType change
+                      request.resource.data.id == userId; // Prevent ID change
+
+      // Platform admins can read all users
       allow read: if isPlatformAdmin();
+
+      // Platform admins can update any user (but not change critical fields)
+      allow update: if isPlatformAdmin() &&
+                      request.resource.data.id == userId; // Prevent ID change
+
+      // User creation is handled by API routes/Cloud Functions only
+      allow create: if false;
+      allow delete: if false;
     }
 
     match /platformAdmins/{adminId} {
