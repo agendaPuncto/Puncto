@@ -66,8 +66,8 @@ export default function SignupPage() {
     try {
       await signup(email, password, displayName);
       // User document will be created by Cloud Function
-      // Redirect after successful signup
-      router.push(returnUrl);
+      // Redirect to onboarding flow instead of home
+      router.push('/onboarding/business');
     } catch (err: any) {
       setError(err.message);
     } finally {

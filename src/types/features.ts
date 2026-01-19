@@ -131,3 +131,10 @@ export const TIER_FEATURES: Record<SubscriptionTier, Partial<FeatureFlags>> = {
     birthdayReminders: true,
   },
 };
+
+/**
+ * Get feature flags for a given subscription tier
+ */
+export function getFeaturesByTier(tier: SubscriptionTier): FeatureFlags {
+  return TIER_FEATURES[tier] as FeatureFlags;
+}

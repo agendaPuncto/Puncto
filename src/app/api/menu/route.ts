@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { auth } from '@/lib/firebaseAdmin';
 import { Product, MenuCategory } from '@/types/restaurant';
+import { verifyBusinessFeatureAccess, extractBusinessIdFromQuery } from '@/lib/api/featureValidation';
 
 // GET - List all products for a business
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const businessId = searchParams.get('businessId');
-    const category = searchParams.get('category');
+    const businessId = extractBusinessIdFromQuery(request);
 
     if (!businessId) {
       return NextResponse.json(
@@ -17,14 +16,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify business exists
-    const businessDoc = await db.collection('businesses').doc(businessId).get();
-    if (!businessDoc.exists) {
+    // Verify business exists and has access to restaurant menu feature
+    const featureCheck = await verifyBusinessFeatureAccess(businessId, 'restaurantMenu');
+    
+    if (!featureCheck) {
       return NextResponse.json(
         { error: 'Business not found' },
         { status: 404 }
       );
     }
+
+    if (!featureCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Feature not available',
+          message: `Restaurant menu feature is not available for your business type (${featureCheck.business.industry}) or subscription tier (${featureCheck.business.subscription.tier})`,
+        },
+        { status: 403 }
+      );
+    }
+
+    const category = request.nextUrl.searchParams.get('category');
 
     const productsRef = db.collection('businesses').doc(businessId).collection('products');
     let query: FirebaseFirestore.Query = productsRef.orderBy('displayOrder', 'asc').orderBy('name', 'asc');
@@ -62,12 +74,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify business exists
-    const businessDoc = await db.collection('businesses').doc(businessId).get();
-    if (!businessDoc.exists) {
+    // Verify business exists and has access to restaurant menu feature
+    const featureCheck = await verifyBusinessFeatureAccess(businessId, 'restaurantMenu');
+    
+    if (!featureCheck) {
       return NextResponse.json(
         { error: 'Business not found' },
         { status: 404 }
+      );
+    }
+
+    if (!featureCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Feature not available',
+          message: `Restaurant menu feature is not available for your business type (${featureCheck.business.industry}) or subscription tier (${featureCheck.business.subscription.tier})`,
+        },
+        { status: 403 }
       );
     }
 

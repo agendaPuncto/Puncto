@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { Order, OrderItem } from '@/types/restaurant';
+import { verifyBusinessFeatureAccess } from '@/lib/api/featureValidation';
 
 // POST - Create a new order
 export async function POST(request: NextRequest) {
@@ -15,12 +16,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify business exists
-    const businessDoc = await db.collection('businesses').doc(businessId).get();
-    if (!businessDoc.exists) {
+    // Verify business exists and has access to table ordering feature
+    const featureCheck = await verifyBusinessFeatureAccess(businessId, 'tableOrdering');
+    
+    if (!featureCheck) {
       return NextResponse.json(
         { error: 'Business not found' },
         { status: 404 }
+      );
+    }
+
+    if (!featureCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Feature not available',
+          message: `Table ordering feature is not available for your business type (${featureCheck.business.industry}) or subscription tier (${featureCheck.business.subscription.tier})`,
+        },
+        { status: 403 }
       );
     }
 

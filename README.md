@@ -92,6 +92,270 @@ Puncto simplifies daily operations for small and medium businesses in beauty, ae
 
 ---
 
+## 🏗️ Multi-Instance Architecture
+
+Puncto consists of **4 distinct instances** served from the same Next.js application using domain-based routing:
+
+### 1. Institutional Website (`puncto.com.br`)
+**Purpose:** Marketing and lead generation  
+**Access:** Public (no authentication required)  
+**Route:** `src/app/(marketing)/`  
+**Domain:** `puncto.com.br`, `www.puncto.com.br`
+
+**Features:**
+- Landing pages and pricing information
+- Feature showcases and industry-specific pages
+- Blog, resources, support
+- Lead capture forms
+
+### 2. Platform Admin (`admin.puncto.com.br`)
+**Purpose:** Puncto team internal dashboard  
+**Access:** Platform administrators only  
+**Route:** `src/app/platform/`  
+**Domain:** `admin.puncto.com.br`
+
+**Features:**
+- View/manage all businesses
+- View/manage all users
+- Subscription and billing oversight
+- Support ticket management
+- Platform analytics and metrics
+- Feature flag management
+- Business onboarding/offboarding
+- System configuration
+
+### 3. Client Admin Dashboard (`{business-slug}.puncto.com.br/admin`)
+**Purpose:** Business owners/managers manage their operations  
+**Access:** Authenticated business staff (owner, manager, professional)  
+**Route:** `src/app/tenant/admin/`  
+**Domain:** `{business-slug}.puncto.com.br/admin`
+
+**Features:**
+- Booking management
+- Service catalog
+- Professional/staff management
+- Customer database (CRM)
+- Financial reports
+- Menu management (restaurants)
+- Inventory management
+- Time clock management
+- Settings and configuration
+
+### 4. Client's Clients (End Users) (`{business-slug}.puncto.com.br`)
+**Purpose:** Customers book services, view orders, manage their account  
+**Access:** Public booking, authenticated for personal portal  
+**Route:** `src/app/tenant/`  
+**Domain:** `{business-slug}.puncto.com.br`
+
+**Features:**
+- Public booking page (PWA)
+- Service browsing and appointment booking
+- Order placement (restaurants)
+- Table ordering (QR code access)
+- Personal booking history
+- Profile management
+- Calendar integration
+
+### Routing Logic
+
+The middleware (`middleware.ts`) handles subdomain-based routing:
+
+```typescript
+// Extract subdomain from hostname and route accordingly:
+if (subdomain === 'admin') → /platform/* (Platform admin)
+if (no subdomain || subdomain === 'www') → /(marketing)/* (Institutional site)
+if (subdomain === '{business-slug}') → /tenant/* (Client instance)
+```
+
+---
+
+## 🔐 Authentication & Authorization
+
+### User Roles
+
+1. **Platform Admin** (`platformAdmin: true`)
+   - Puncto team members
+   - Full access to all businesses
+   - Custom claim: `customClaims.platformAdmin = true`
+
+2. **Business Owner** (`role: 'owner'`)
+   - Full access to their business
+   - Custom claim: `customClaims.businessRoles[businessId] = 'owner'`
+
+3. **Business Manager** (`role: 'manager'`)
+   - Limited admin access (configurable permissions)
+   - Custom claim: `customClaims.businessRoles[businessId] = 'manager'`
+
+4. **Professional** (`role: 'professional'`)
+   - Read-only access, can manage own bookings
+   - Custom claim: `customClaims.businessRoles[businessId] = 'professional'`
+
+5. **Customer** (No business role)
+   - Access to own bookings and profile
+   - No admin access
+
+### Setting Platform Admin Access
+
+Use the provided script to grant platform admin access:
+
+```bash
+npm run set-admin email@puncto.com.br
+```
+
+**Note:** Users must sign out and sign in again after the claim is set for it to take effect.
+
+---
+
+## 🎯 Feature Access Control
+
+Features are controlled by **two dimensions**:
+
+### 1. Subscription Tier
+- `free` - Limited features
+- `basic` (Starter) - Core scheduling features
+- `pro` (Growth) - Restaurant + scheduling
+- `enterprise` (Pro/Enterprise) - All features
+
+### 2. Business Type/Industry
+
+Different industries get access to relevant modules:
+
+```typescript
+type BusinessType = 
+  | 'salon'           // Beauty salons, barbershops
+  | 'clinic'          // Medical/dental/aesthetic clinics
+  | 'restaurant'      // Restaurants, cafes
+  | 'bakery'          // Bakeries, confectioneries
+  | 'event'           // Event spaces
+  | 'general';        // General service businesses
+```
+
+**Feature mapping by business type:**
+
+| Feature | Salon | Clinic | Restaurant | Subscription Required |
+|---------|-------|--------|------------|----------------------|
+| Scheduling | ✅ | ✅ | ✅ | Basic+ |
+| Payments | ✅ | ✅ | ✅ | Growth+ |
+| CRM | ✅ | ✅ | ⚠️* | Pro+ |
+| Restaurant Menu | ❌ | ❌ | ✅ | Growth+ |
+| Table Ordering | ❌ | ❌ | ✅ | Growth+ |
+| Inventory | ❌ | ⚠️* | ✅ | Pro+ |
+| Time Clock | ⚠️* | ⚠️* | ✅ | Pro+ |
+
+*⚠️ Available but not primary use case - can be enabled manually
+
+### Using Feature Guards
+
+**In Client Components:**
+```tsx
+import { FeatureGuard } from '@/components/features/FeatureGuard';
+
+export default function MenuPage() {
+  return (
+    <FeatureGuard feature="restaurantMenu">
+      <RestaurantMenu />
+    </FeatureGuard>
+  );
+}
+```
+
+**Using Hook:**
+```tsx
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
+
+export default function MyComponent() {
+  const hasMenu = useFeatureAccess('restaurantMenu');
+  
+  if (!hasMenu) {
+    return <UpgradePrompt />;
+  }
+  
+  return <RestaurantMenu />;
+}
+```
+
+### API Feature Validation
+
+All API routes validate feature access server-side:
+
+```typescript
+// Example: Restaurant menu endpoint
+const featureCheck = await verifyBusinessFeatureAccess(businessId, 'restaurantMenu');
+if (!featureCheck?.hasAccess) {
+  return NextResponse.json(
+    { error: 'Feature not available', message: '...' },
+    { status: 403 }
+  );
+}
+```
+
+**Security Guarantee:**
+- ❌ A Salon business **CANNOT** access restaurant endpoints (403 Forbidden)
+- ✅ Server-side validation prevents bypass via Postman or direct API calls
+
+---
+
+## 💳 Onboarding & Payment Flow
+
+### Mandatory Payment Onboarding
+
+All new businesses must complete payment before accessing the platform:
+
+```
+User Signup → Business Info → Plan Selection → Stripe Checkout → Webhook Activation → Dashboard Access
+```
+
+### Flow Details
+
+1. **User Signup** (`/auth/signup`)
+   - Creates Firebase Auth user
+   - Creates user document in Firestore
+   - Redirects to business onboarding
+
+2. **Business Information** (`/onboarding/business`)
+   - Collects business details (name, legal name, tax ID, industry, contact info)
+   - Auto-formatting for CPF/CNPJ and phone numbers
+   - Industry selection for feature access control
+
+3. **Plan Selection** (`/onboarding/plan`)
+   - Displays available subscription plans
+   - Creates business with `pending_payment` status
+   - Generates Stripe Checkout session
+
+4. **Payment** (Stripe Checkout)
+   - Hosted payment page
+   - Supports PIX, credit cards, etc.
+   - Secure payment processing
+
+5. **Activation** (Webhook)
+   - Stripe webhook confirms payment
+   - Changes business status from `pending_payment` to `active`
+   - Only then can users access dashboard
+
+6. **Dashboard Access**
+   - Protected by `PaymentGuard` component
+   - Verifies subscription status
+   - Redirects to payment page if pending
+
+### Environment Variables Required
+
+```bash
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+
+# Stripe Price IDs for subscription plans
+STRIPE_PRICE_ID_STARTER=price_starter_...
+STRIPE_PRICE_ID_GROWTH=price_growth_...
+STRIPE_PRICE_ID_PRO=price_pro_...
+
+# Application URL for Stripe redirects
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+```
+
+---
+
 ## 🚀 Features by Phase
 
 ### Phase 1 — Scheduling + Confirmations (MVP) ✅ **COMPLETED**
@@ -234,6 +498,59 @@ Puncto simplifies daily operations for small and medium businesses in beauty, ae
 - Geolocation module
 - Routing algorithms
 - Map integrations (Google Maps, OpenStreetMap)
+
+---
+
+### Platform Admin Implementation ✅ **COMPLETED**
+
+The platform admin instance provides comprehensive management tools for the Puncto team.
+
+#### Dashboard Features
+- Real-time platform metrics (total businesses, active businesses, user counts)
+- Subscription tier distribution visualization
+- Industry distribution analytics
+- Recent signups tracking (last 30 days)
+- Quick action links to manage businesses and users
+
+#### Business Management
+- **List View** (`/platform/businesses`)
+  - Filter by status (active, suspended, cancelled)
+  - Filter by tier (free, basic, pro, enterprise)
+  - Filter by industry (salon, clinic, restaurant, etc.)
+  - Search by name, email, or slug
+  - Pagination support
+  
+- **Detail View** (`/platform/businesses/[id]`)
+  - Complete business information
+  - Subscription details and history
+  - Quick links to public site and admin dashboard
+  - Suspend/activate controls
+  
+- **Business Creation**
+  - API endpoint for creating new businesses
+  - Requires business type (industry) selection
+  - Automatic slug generation
+  - Stripe customer creation
+
+#### User Management
+- **User List** (`/platform/users`)
+  - View all users across all businesses
+  - Filter by business, role, search
+  - Shows platform admin status
+  - Shows business roles and memberships
+  - Pagination support
+
+#### API Routes (All Platform Admin Protected)
+- `/api/platform/businesses` - List and create businesses
+- `/api/platform/businesses/[id]` - Business detail and updates
+- `/api/platform/users` - User management
+- `/api/platform/stats` - Platform statistics
+
+#### Security
+- All routes verify `platformAdmin` custom claim
+- Supports both JWT token (Bearer) and session cookie
+- Client-side protection via `ProtectedRoute` component
+- Data isolation enforced by Firestore security rules
 
 ---
 
@@ -553,6 +870,41 @@ Puncto/
 └── README.md
 ```
 
+### Recent Additions to Project Structure
+
+**Platform Admin Routes:**
+- `src/app/platform/dashboard/page.tsx` - Platform admin dashboard
+- `src/app/platform/businesses/page.tsx` - Business list and management
+- `src/app/platform/businesses/[id]/page.tsx` - Business detail view
+- `src/app/platform/users/page.tsx` - User management
+- `src/app/platform/billing/page.tsx` - Billing and subscriptions
+
+**Onboarding Routes:**
+- `src/app/onboarding/business/page.tsx` - Business information form
+- `src/app/onboarding/plan/page.tsx` - Plan selection
+- `src/app/onboarding/success/page.tsx` - Payment success
+- `src/app/onboarding/payment/page.tsx` - Payment pending
+
+**Platform Admin API Routes:**
+- `src/app/api/platform/businesses/route.ts` - List/create businesses
+- `src/app/api/platform/businesses/[id]/route.ts` - Business management
+- `src/app/api/platform/users/route.ts` - User management
+- `src/app/api/platform/stats/route.ts` - Platform statistics
+
+**Onboarding API Routes:**
+- `src/app/api/onboarding/create-business/route.ts` - Create business with payment
+- `src/app/api/onboarding/get-checkout-session/route.ts` - Retrieve checkout session
+
+**Feature Access Control:**
+- `src/lib/features/businessTypeFeatures.ts` - Business type feature mapping
+- `src/lib/hooks/useFeatureAccess.ts` - Feature access hook
+- `src/lib/api/featureValidation.ts` - Server-side feature validation
+- `src/components/features/FeatureGuard.tsx` - Feature guard component
+- `src/components/business/PaymentGuard.tsx` - Payment status guard
+
+**Scripts:**
+- `scripts/set-admin.ts` - Set platform admin access
+
 ---
 
 ## 🗄️ Database Schema (Firestore)
@@ -560,19 +912,39 @@ Puncto/
 ### Core Collections
 
 ```typescript
-// organizations/{orgId}
+// businesses/{businessId}
 {
   id: string;
-  name: string;
+  displayName: string;
+  legalName: string;
   slug: string;                    // URL-friendly (e.g., "salon-beauty")
-  type: "salon" | "clinic" | "restaurant" | "bakery";
-  plan: "starter" | "growth" | "pro" | "enterprise";
-  stripeCustomerId: string;
-  subscriptionStatus: "active" | "trialing" | "canceled" | "past_due";
+  taxId: string;                   // CPF or CNPJ
+  email: string;
+  phone: string;
+  industry: "salon" | "clinic" | "restaurant" | "bakery" | "event" | "general"; // Business type for feature access
+  subscription: {
+    tier: "free" | "basic" | "pro" | "enterprise";
+    status: "active" | "trial" | "suspended" | "cancelled" | "pending_payment"; // pending_payment for new businesses
+    stripeCustomerId: string;
+    stripeSubscriptionId: string | null;
+    stripeCheckoutSessionId: string | null; // For pending payments
+    stripePriceId: string;
+    currentPeriodStart: Timestamp;
+    currentPeriodEnd: Timestamp;
+  };
+  features: {
+    scheduling: boolean;
+    payments: boolean;
+    restaurantMenu: boolean;
+    tableOrdering: boolean;
+    inventoryManagement: boolean;
+    timeClock: boolean;
+    // ... other features based on tier and industry
+  };
   settings: {
     timezone: string;              // e.g., "America/Sao_Paulo"
     currency: "BRL";
-    locale: "pt-BR";
+    locale: "pt-BR" | "en-US" | "es-ES";
     confirmationChannels: ["whatsapp", "email", "sms"];
     cancellationPolicy: {
       hours: 24;
@@ -583,7 +955,10 @@ Puncto/
   updatedAt: Timestamp;
 }
 
-// organizations/{orgId}/units/{unitId}
+// Note: Businesses are created with status "pending_payment" during onboarding
+// and only activated to "active" when Stripe webhook confirms payment
+
+// businesses/{businessId}/units/{unitId}
 {
   id: string;
   name: string;
@@ -601,7 +976,7 @@ Puncto/
   };
 }
 
-// organizations/{orgId}/services/{serviceId}
+// businesses/{businessId}/services/{serviceId}
 {
   id: string;
   name: string;
@@ -615,7 +990,7 @@ Puncto/
   active: boolean;
 }
 
-// organizations/{orgId}/professionals/{professionalId}
+// businesses/{businessId}/professionals/{professionalId}
 {
   id: string;
   userId: string;                  // Link to users collection
@@ -628,7 +1003,7 @@ Puncto/
   commissionPercent: number;
 }
 
-// organizations/{orgId}/customers/{customerId}
+// businesses/{businessId}/customers/{customerId}
 {
   id: string;
   name: string;
@@ -643,7 +1018,7 @@ Puncto/
   };
 }
 
-// organizations/{orgId}/bookings/{bookingId}
+// businesses/{businessId}/bookings/{bookingId}
 {
   id: string;
   serviceId: string;
@@ -662,7 +1037,7 @@ Puncto/
   updatedAt: Timestamp;
 }
 
-// organizations/{orgId}/products/{productId} (Restaurant)
+// businesses/{businessId}/products/{productId} (Restaurant)
 {
   id: string;
   name: string;
@@ -678,7 +1053,7 @@ Puncto/
   }>;
 }
 
-// organizations/{orgId}/orders/{orderId} (Restaurant)
+// businesses/{businessId}/orders/{orderId} (Restaurant)
 {
   id: string;
   tableId: string;
@@ -699,7 +1074,7 @@ Puncto/
   closedAt?: Timestamp;
 }
 
-// organizations/{orgId}/clockins/{clockinId} (Time Clock)
+// businesses/{businessId}/clockins/{clockinId} (Time Clock)
 {
   id: string;
   userId: string;
@@ -716,7 +1091,7 @@ Puncto/
   email: string;
   name: string;
   role: "owner" | "manager" | "professional" | "attendant";
-  orgId: string;
+  businessId: string;
   unitIds: string[];
   createdAt: Timestamp;
 }
@@ -738,8 +1113,8 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function belongsToOrg(orgId) {
-      return isAuthenticated() && request.auth.token.orgId == orgId;
+    function belongsToBusiness(businessId) {
+      return isAuthenticated() && request.auth.token.businessId == businessId;
     }
     
     function hasRole(role) {
@@ -747,24 +1122,24 @@ service cloud.firestore {
     }
     
     // Organizations
-    match /organizations/{orgId} {
-      allow read: if belongsToOrg(orgId);
-      allow write: if belongsToOrg(orgId) && hasRole('owner');
+    match /businesses/{businessId} {
+      allow read: if belongsToBusiness(businessId);
+      allow write: if belongsToBusiness(businessId) && hasRole('owner');
       
       // Subcollections
       match /bookings/{bookingId} {
-        allow read: if belongsToOrg(orgId);
+        allow read: if belongsToBusiness(businessId);
         allow create: if true;  // Public can book
-        allow update, delete: if belongsToOrg(orgId) && 
+        allow update, delete: if belongsToBusiness(businessId) && 
           (hasRole('owner') || hasRole('manager'));
       }
       
       match /customers/{customerId} {
-        allow read, write: if belongsToOrg(orgId);
+        allow read, write: if belongsToBusiness(businessId);
       }
       
       match /orders/{orderId} {
-        allow read: if belongsToOrg(orgId);
+        allow read: if belongsToBusiness(businessId);
         allow create, update: if true;  // Public can order
       }
       
@@ -784,10 +1159,39 @@ service cloud.firestore {
 ### Authentication & Authorization
 
 - **Firebase Auth** with custom claims for RBAC
-- **JWT tokens** with `orgId` and `role` claims
+- **JWT tokens** with `businessId` and `role` claims
+- **Platform Admin** - Custom claim `platformAdmin: true` for Puncto team access
+  - Access via `npm run set-admin email@puncto.com.br`
+  - Must sign out and sign in after claim is set
+  - Full access to all businesses and users
 - **MFA** for owners and managers
 - **Secure sessions** with httpOnly cookies + JWT
 - **API key rotation** for third-party integrations
+
+### API Feature Validation
+
+All API routes validate feature access server-side using business type and subscription tier:
+
+```typescript
+// Server-side validation in API routes
+const featureCheck = await verifyBusinessFeatureAccess(businessId, 'restaurantMenu');
+if (!featureCheck?.hasAccess) {
+  return NextResponse.json(
+    { error: 'Feature not available', message: '...' },
+    { status: 403 }
+  );
+}
+```
+
+**Protected Endpoints:**
+- `/api/menu` - Validates `restaurantMenu` feature
+- `/api/orders` - Validates `tableOrdering` feature
+- `/api/platform/*` - Validates platform admin access
+
+**Security Guarantee:**
+- ❌ Salon businesses cannot access restaurant endpoints (403 Forbidden)
+- ❌ Cannot be bypassed via Postman or direct API calls
+- ✅ Server-side validation prevents unauthorized access
 
 ### Data Privacy (LGPD/GDPR)
 
@@ -837,6 +1241,7 @@ service cloud.firestore {
 | `npm run type-check` | Run TypeScript type checking |
 | `npm run seed` | Seed database with demo data |
 | `npm run migrate` | Run database migrations |
+| `npm run set-admin` | Set platform admin access for a user (requires email) |
 | `npm test` | Run unit tests (Jest) |
 | `npm run test:e2e` | Run end-to-end tests (Playwright) |
 
@@ -868,6 +1273,92 @@ http://localhost:3000?subdomain=demo
 ```
 
 Then visit: `http://demo.puncto.local:3000`
+
+### Testing Onboarding Flow
+
+1. **User Signup:**
+   ```
+   http://localhost:3000/auth/signup
+   ```
+   - Create a new account
+   - Should redirect to `/onboarding/business`
+
+2. **Business Information:**
+   - Fill in business details
+   - Select industry (important for feature access)
+   - Should redirect to `/onboarding/plan`
+
+3. **Plan Selection:**
+   - Select a subscription plan
+   - Should create business with `pending_payment` status
+   - Should redirect to Stripe Checkout
+
+4. **Payment:**
+   - Use Stripe test card: `4242 4242 4242 4242`
+   - Complete payment
+   - Webhook should activate business
+
+5. **Dashboard Access:**
+   - Should redirect to `/admin`
+   - `PaymentGuard` verifies subscription status
+
+### Testing Platform Admin
+
+1. **Set Platform Admin Access:**
+   ```bash
+   npm run set-admin your@email.com
+   ```
+
+2. **Sign Out and Sign In:**
+   - Must sign out and sign in for claim to take effect
+
+3. **Access Platform Admin:**
+   ```
+   http://localhost:3000?subdomain=admin
+   # or
+   http://admin.puncto.local:3000
+   ```
+
+4. **Test Features:**
+   - View dashboard with platform metrics
+   - List all businesses
+   - Filter by status, tier, industry
+   - View business details
+   - Manage users
+
+### Testing Feature Access Control
+
+1. **Create Different Business Types:**
+   ```bash
+   # Create a salon business
+   # Create a restaurant business
+   ```
+
+2. **Test API Access:**
+   ```bash
+   # Try accessing restaurant menu with salon business
+   curl -X GET "http://localhost:3000/api/menu?businessId=salon-id"
+   # Should return 403 Forbidden
+   
+   # Access with restaurant business
+   curl -X GET "http://localhost:3000/api/menu?businessId=restaurant-id"
+   # Should work if tier includes feature
+   ```
+
+3. **Test UI Guards:**
+   - Log in as salon business
+   - Menu option should not appear in navigation
+   - Direct access to `/admin/menu` should show upgrade prompt
+
+### Testing Stripe Webhooks Locally
+
+```bash
+# Install Stripe CLI
+stripe listen --forward-to localhost:3000/api/subscriptions/webhook
+
+# In another terminal, trigger test event
+stripe trigger checkout.session.completed
+```
 
 ### Running Tests
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { Order } from '@/types/restaurant';
+import { verifyBusinessFeatureAccess, extractBusinessIdFromQuery } from '@/lib/api/featureValidation';
 
 // GET - List all orders for a business
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const businessId = searchParams.get('businessId');
-    const status = searchParams.get('status');
-    const tableId = searchParams.get('tableId');
+    const businessId = extractBusinessIdFromQuery(request);
 
     if (!businessId) {
       return NextResponse.json(
@@ -17,13 +15,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const businessDoc = await db.collection('businesses').doc(businessId).get();
-    if (!businessDoc.exists) {
+    // Verify business exists and has access to table ordering feature
+    const featureCheck = await verifyBusinessFeatureAccess(businessId, 'tableOrdering');
+    
+    if (!featureCheck) {
       return NextResponse.json(
         { error: 'Business not found' },
         { status: 404 }
       );
     }
+
+    if (!featureCheck.hasAccess) {
+      return NextResponse.json(
+        {
+          error: 'Feature not available',
+          message: `Table ordering feature is not available for your business type (${featureCheck.business.industry}) or subscription tier (${featureCheck.business.subscription.tier})`,
+        },
+        { status: 403 }
+      );
+    }
+
+    const status = request.nextUrl.searchParams.get('status');
+    const tableId = request.nextUrl.searchParams.get('tableId');
 
     const ordersRef = db.collection('businesses').doc(businessId).collection('orders');
     let query: FirebaseFirestore.Query = ordersRef.orderBy('createdAt', 'desc');

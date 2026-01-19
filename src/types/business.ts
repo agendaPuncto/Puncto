@@ -29,7 +29,7 @@ export interface Branding {
 
 export interface Subscription {
   tier: 'free' | 'basic' | 'pro' | 'enterprise';
-  status: 'active' | 'trial' | 'suspended' | 'cancelled';
+  status: 'active' | 'trial' | 'suspended' | 'cancelled' | 'pending_payment';
   currentPeriodStart: Timestamp | Date;
   currentPeriodEnd: Timestamp | Date;
   trialEndsAt?: Timestamp | Date;
@@ -43,6 +43,8 @@ export interface Subscription {
   stripeSubscriptionId?: string;
   stripePriceId?: string;
   cancelAtPeriodEnd?: boolean;
+  // Stripe checkout session ID for pending payments
+  stripeCheckoutSessionId?: string;
 }
 
 export interface FeatureFlags {

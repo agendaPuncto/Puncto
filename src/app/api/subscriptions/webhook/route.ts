@@ -11,6 +11,12 @@ export async function POST(request: NextRequest) {
 
     // Handle subscription events
     switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutSessionCompleted(session);
+        break;
+      }
+
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
@@ -49,6 +55,25 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+}
+
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const businessId = session.metadata?.businessId;
+  if (!businessId) {
+    console.error('[subscription-webhook] Missing businessId in checkout session metadata');
+    return;
+  }
+
+  const businessRef = db.collection('businesses').doc(businessId);
+
+  // Activate the business by changing status from pending_payment to active
+  await businessRef.update({
+    'subscription.status': 'active',
+    'subscription.stripeSubscriptionId': session.subscription as string,
+    updatedAt: Timestamp.now(),
+  });
+
+  console.log(`[subscription-webhook] Business ${businessId} activated after successful payment`);
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
