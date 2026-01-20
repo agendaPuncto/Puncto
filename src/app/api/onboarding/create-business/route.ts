@@ -188,12 +188,37 @@ export async function POST(request: NextRequest) {
       'subscription.stripeCheckoutSessionId': checkoutSession.id,
     });
 
-    // Set custom claims for the user
+    // Get existing custom claims (if any)
+    const userRecord = await auth.getUser(userId);
+    const existingClaims = userRecord.customClaims || {};
+
+    // Set custom claims for the user as business_user with owner role
     await auth.setCustomUserClaims(userId, {
+      ...existingClaims,
+      userType: 'business_user',
       businessRoles: {
+        ...(existingClaims.businessRoles || {}),
         [businessId]: 'owner',
       },
+      primaryBusinessId: businessId,
+      // Remove customer-specific claims if they exist
+      customerId: undefined,
+      // Remove platform admin claims if they exist (shouldn't happen but safety)
+      platformAdmin: undefined,
+      platformRole: undefined,
     });
+
+    // Update user document in Firestore
+    const userDocRef = db.collection('users').doc(userId);
+    await userDocRef.set({
+      id: userId,
+      email: userRecord.email,
+      displayName: userRecord.displayName || displayName,
+      type: 'business_user',
+      businessId,
+      role: 'owner',
+      updatedAt: now,
+    }, { merge: true });
 
     return NextResponse.json({
       success: true,

@@ -39,10 +39,7 @@ export async function middleware(request: NextRequest) {
 
   // Auth routes - redirect if already logged in
   if (url.pathname.startsWith('/auth/')) {
-    if (hasAuthCookie && (url.pathname === '/auth/login' || url.pathname === '/auth/signup')) {
-      const returnUrl = url.searchParams.get('returnUrl') || '/';
-      return NextResponse.redirect(new URL(returnUrl, request.url));
-    }
+    // Allow auth routes to proceed (they handle their own redirects)
     return NextResponse.next();
   }
 
@@ -51,7 +48,7 @@ export async function middleware(request: NextRequest) {
     // Require authentication for platform routes
     if (!hasAuthCookie && !url.pathname.startsWith('/auth/')) {
       return NextResponse.redirect(
-        new URL(`/auth/login?subdomain=admin&returnUrl=${encodeURIComponent(url.pathname)}`, request.url)
+        new URL(`/auth/platform/login?returnUrl=${encodeURIComponent(url.pathname)}`, request.url)
       );
     }
 
@@ -107,7 +104,7 @@ export async function middleware(request: NextRequest) {
   if (url.pathname.startsWith('/tenant/admin') || url.pathname.startsWith('/admin')) {
     if (!hasAuthCookie) {
       return NextResponse.redirect(
-        new URL(`/auth/login?subdomain=${subdomain}&returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
+        new URL(`/auth/business/login?subdomain=${subdomain}&returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
       );
     }
 
@@ -135,8 +132,8 @@ export async function middleware(request: NextRequest) {
           );
         }
 
-        // Fallback: redirect to login
-        return NextResponse.redirect(new URL('/auth/login', request.url));
+        // Fallback: redirect to business login
+        return NextResponse.redirect(new URL('/auth/business/login', request.url));
       }
     }
   }
@@ -148,7 +145,7 @@ export async function middleware(request: NextRequest) {
       url.pathname.startsWith('/profile')) {
     if (!hasAuthCookie) {
       return NextResponse.redirect(
-        new URL(`/auth/login?returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
+        new URL(`/auth/customer/login?returnUrl=${encodeURIComponent(url.pathname + url.search)}`, request.url)
       );
     }
   }

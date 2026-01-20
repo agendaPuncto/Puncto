@@ -171,38 +171,95 @@ if (subdomain === '{business-slug}') → /tenant/* (Client instance)
 
 ## 🔐 Authentication & Authorization
 
-### User Roles
+### Separate Authentication Flows
 
-1. **Platform Admin** (`platformAdmin: true`)
-   - Puncto team members
-   - Full access to all businesses
-   - Custom claim: `customClaims.platformAdmin = true`
+Puncto implements **three completely separate authentication flows** to prevent unauthorized access and ensure security:
 
-2. **Business Owner** (`role: 'owner'`)
-   - Full access to their business
-   - Custom claim: `customClaims.businessRoles[businessId] = 'owner'`
+#### 1. Platform Admin (Internal Team Only)
+- **Access:** Manual creation via script only
+- **Login:** `/auth/platform/login`
+- **Features:** Full platform access, manage all businesses, subscription oversight
 
-3. **Business Manager** (`role: 'manager'`)
-   - Limited admin access (configurable permissions)
-   - Custom claim: `customClaims.businessRoles[businessId] = 'manager'`
+**Creating Platform Admin:**
+```bash
+npm run create-admin
+```
+Interactive prompts will guide you through creating a platform administrator with the appropriate access level (super_admin, support, or analyst).
 
-4. **Professional** (`role: 'professional'`)
-   - Read-only access, can manage own bookings
-   - Custom claim: `customClaims.businessRoles[businessId] = 'professional'`
-
-5. **Customer** (No business role)
-   - Access to own bookings and profile
-   - No admin access
-
-### Setting Platform Admin Access
-
-Use the provided script to grant platform admin access:
-
+**For existing users, grant admin access:**
 ```bash
 npm run set-admin email@puncto.com.br
 ```
-
 **Note:** Users must sign out and sign in again after the claim is set for it to take effect.
+
+#### 2. Business Owner (Self-Service)
+- **Signup:** `/auth/business/signup`
+- **Login:** `/auth/business/login`
+- **Flow:** Signup → Business Onboarding → Plan Selection → Payment → Auto-assignment
+
+**Automatic Role Assignment:**
+When a business owner completes the onboarding and payment process, the system automatically:
+- Assigns `userType: 'business_user'`
+- Grants `businessRoles[businessId]: 'owner'`
+- Sets `primaryBusinessId: businessId`
+- Creates business with selected subscription tier
+
+**No manual intervention required** - business owners are fully self-service.
+
+#### 3. Customer (Self-Service)
+- **Signup:** `/auth/customer/signup`
+- **Login:** `/auth/customer/login`
+- **Flow:** Quick signup → Immediate access (no onboarding)
+
+**Automatic Assignment:**
+- Assigns `userType: 'customer'`
+- Grants access to booking history and profile
+- No business admin access
+
+### User Types & Custom Claims
+
+| User Type | Custom Claims | Access Level |
+|-----------|--------------|--------------|
+| **Platform Admin** | `userType: 'platform_admin'`<br>`platformAdmin: true`<br>`platformRole: 'super_admin' \| 'support' \| 'analyst'` | Full platform access |
+| **Business Owner** | `userType: 'business_user'`<br>`businessRoles: {businessId: 'owner'}`<br>`primaryBusinessId: businessId` | Full access to their business(es) |
+| **Business Manager** | `userType: 'business_user'`<br>`businessRoles: {businessId: 'manager'}` | Limited admin access (configurable) |
+| **Professional** | `userType: 'business_user'`<br>`businessRoles: {businessId: 'professional'}` | Read-only, manage own bookings |
+| **Customer** | `userType: 'customer'`<br>`customerId: userId` | Own bookings and profile only |
+
+### Security Enforcement
+
+**Multi-Layer Protection:**
+1. **Middleware** - Validates JWT custom claims before page load
+2. **Layout Components** - `<ProtectedRoute>` enforces role requirements
+3. **API Routes** - Server-side validation on all endpoints
+
+**Access Control Rules:**
+- ❌ Customers **cannot** access business admin areas
+- ❌ Business owners **cannot** access platform admin areas
+- ❌ Business owners **cannot** access other businesses' admin areas
+- ✅ Platform admins have full access when needed
+- ✅ All access attempts are logged and monitored
+
+### Authentication URLs
+
+| User Type | Signup | Login | Dashboard |
+|-----------|--------|-------|-----------|
+| **Platform Admin** | Manual script | `/auth/platform/login` | `/platform/dashboard` |
+| **Business Owner** | `/auth/business/signup` | `/auth/business/login` | `/{slug}/admin/dashboard` |
+| **Customer** | `/auth/customer/signup` | `/auth/customer/login` | `/my-bookings` |
+
+**Development Access:**
+- Platform Admin: `http://localhost:3000?subdomain=admin`
+- Business: `http://localhost:3000?subdomain={slug}`
+- Customer: `http://localhost:3000?subdomain={slug}`
+
+**Production Access:**
+- Platform Admin: `https://admin.puncto.com.br`
+- Business: `https://{slug}.puncto.com.br`
+- Customer: `https://{slug}.puncto.com.br`
+
+For detailed authentication documentation, see [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md).
+For a quick start guide, see [QUICK_START.md](QUICK_START.md).
 
 ---
 
