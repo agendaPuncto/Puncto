@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import Link from 'next/link';
 
 import LeadCaptureForm from '@/components/marketing/LeadCaptureForm';
 
@@ -85,8 +86,15 @@ function ContactContent() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900">WhatsApp</h3>
-                    <p className="text-slate-600">+55 (11) 99999-9999</p>
-                    <p className="text-sm text-slate-500">
+                    <a 
+                      href="https://wa.me/5541991626161" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-700"
+                    >
+                      Entre em contato via WhatsApp
+                    </a>
+                    <p className="text-sm text-slate-500 mt-1">
                       Seg-Sex, 9h às 18h
                     </p>
                   </div>
@@ -116,13 +124,11 @@ function ContactContent() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900">Escritório</h3>
+                    <h3 className="font-semibold text-slate-900">Localização</h3>
                     <p className="text-slate-600">
-                      Av. Paulista, 1000
+                      Empresa brasileira focada em soluções SaaS
                       <br />
-                      Bela Vista - São Paulo, SP
-                      <br />
-                      CEP 01310-100
+                      para pequenos e médios negócios
                     </p>
                   </div>
                 </div>
@@ -135,28 +141,28 @@ function ContactContent() {
                 </h3>
                 <ul className="space-y-2">
                   <li>
-                    <a
-                      href="https://docs.puncto.com.br"
+                    <Link
+                      href="/demo"
                       className="text-primary-600 hover:text-primary-700"
                     >
-                      Central de Ajuda
-                    </a>
+                      Agendar Demonstração
+                    </Link>
                   </li>
                   <li>
-                    <a
-                      href="https://status.puncto.com.br"
+                    <Link
+                      href="/pricing"
                       className="text-primary-600 hover:text-primary-700"
                     >
-                      Status do Sistema
-                    </a>
+                      Ver Planos e Preços
+                    </Link>
                   </li>
                   <li>
-                    <a
-                      href="https://discord.gg/puncto"
+                    <Link
+                      href="/features"
                       className="text-primary-600 hover:text-primary-700"
                     >
-                      Comunidade Discord
-                    </a>
+                      Funcionalidades
+                    </Link>
                   </li>
                 </ul>
               </div>

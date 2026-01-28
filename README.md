@@ -2,6 +2,8 @@
 
 A comprehensive multi-tenant SaaS platform for service-based and food establishments, offering scheduling, automated confirmations, payments, restaurant management, time tracking, and full ERP capabilities.
 
+http://localhost:3000/auth/platform/login?subdomain=admin
+
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore-orange)](https://firebase.google.com/)

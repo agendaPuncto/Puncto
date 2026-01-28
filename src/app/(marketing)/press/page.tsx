@@ -6,23 +6,8 @@ export const metadata: Metadata = {
   description: 'Recursos para imprensa, logos, materiais de marca e informações sobre o Puncto.',
 };
 
-const pressReleases = [
-  {
-    date: '2024-01-15',
-    title: 'Puncto lança módulo completo para restaurantes com comanda digital',
-    excerpt: 'Nova funcionalidade permite pedidos via QR Code e gestão de mesas em tempo real.',
-  },
-  {
-    date: '2023-11-20',
-    title: 'Puncto atinge marca de 500 negócios ativos na plataforma',
-    excerpt: 'Startup brasileira de gestão para pequenos negócios celebra crescimento acelerado.',
-  },
-  {
-    date: '2023-09-05',
-    title: 'Puncto recebe investimento seed para expandir operações',
-    excerpt: 'Aporte será usado para desenvolvimento de produto e expansão comercial.',
-  },
-];
+// Press releases will be added when available
+const pressReleases: Array<{ date: string; title: string; excerpt: string }> = [];
 
 const mediaAssets = [
   {
@@ -71,11 +56,7 @@ const mediaAssets = [
 
 const companyFacts = [
   { label: 'Fundação', value: '2023' },
-  { label: 'Sede', value: 'São Paulo, Brasil' },
-  { label: 'Negócios ativos', value: '500+' },
-  { label: 'Agendamentos processados', value: '1M+' },
-  { label: 'Países', value: 'Brasil' },
-  { label: 'Funcionários', value: '15+' },
+  { label: 'País', value: 'Brasil' },
 ];
 
 export default function PressPage() {
@@ -131,10 +112,9 @@ export default function PressPage() {
                   controle de estoque e muito mais em uma única solução.
                 </p>
                 <p>
-                  Com mais de 500 negócios ativos e mais de 1 milhão de
-                  agendamentos processados, o Puncto está transformando a forma
-                  como pequenos negócios brasileiros operam, reduzindo no-shows,
-                  aumentando receita e melhorando a experiência dos clientes.
+                  O Puncto está transformando a forma como pequenos negócios 
+                  brasileiros operam, oferecendo uma solução integrada que reduz 
+                  no-shows, aumenta receita e melhora a experiência dos clientes.
                 </p>
               </div>
             </div>
@@ -317,26 +297,37 @@ export default function PressPage() {
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-4">
-            {pressReleases.map((release) => (
-              <div
-                key={release.date}
-                className="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-soft transition-shadow"
-              >
-                <time className="text-sm text-slate-500">
-                  {new Date(release.date).toLocaleDateString('pt-BR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </time>
-                <h3 className="font-semibold text-slate-900 mt-2 mb-2">
-                  {release.title}
-                </h3>
-                <p className="text-slate-600 text-sm">{release.excerpt}</p>
-              </div>
-            ))}
-          </div>
+          {pressReleases.length > 0 ? (
+            <div className="max-w-3xl mx-auto space-y-4">
+              {pressReleases.map((release) => (
+                <div
+                  key={release.date}
+                  className="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-soft transition-shadow"
+                >
+                  <time className="text-sm text-slate-500">
+                    {new Date(release.date).toLocaleDateString('pt-BR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </time>
+                  <h3 className="font-semibold text-slate-900 mt-2 mb-2">
+                    {release.title}
+                  </h3>
+                  <p className="text-slate-600 text-sm">{release.excerpt}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto text-center py-12">
+              <p className="text-slate-600 mb-4">
+                Comunicados de imprensa serão publicados aqui quando disponíveis.
+              </p>
+              <p className="text-sm text-slate-500">
+                Para solicitações de imprensa, entre em contato através do email abaixo.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

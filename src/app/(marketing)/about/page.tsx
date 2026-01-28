@@ -6,28 +6,8 @@ import { motion } from 'framer-motion';
 import CTASection from '@/components/marketing/CTASection';
 import StatsCounter from '@/components/marketing/StatsCounter';
 
-const teamMembers = [
-  {
-    name: 'Maria Santos',
-    role: 'CEO & Co-fundadora',
-    bio: 'Ex-gerente de operações em grandes redes de salões. Apaixonada por tecnologia e gestão de negócios.',
-  },
-  {
-    name: 'João Silva',
-    role: 'CTO & Co-fundador',
-    bio: 'Engenheiro de software com 15 anos de experiência em startups de tecnologia e fintechs.',
-  },
-  {
-    name: 'Ana Costa',
-    role: 'Head de Produto',
-    bio: 'Designer de produto focada em UX. Anteriormente no Nubank e iFood.',
-  },
-  {
-    name: 'Carlos Oliveira',
-    role: 'Head de Vendas',
-    bio: 'Especialista em vendas B2B SaaS com experiência em mercados emergentes.',
-  },
-];
+// Team information will be added when available
+const teamMembers: Array<{ name: string; role: string; bio: string }> = [];
 
 const values = [
   {
@@ -57,11 +37,8 @@ const values = [
 ];
 
 const milestones = [
-  { year: '2023', title: 'Fundação', description: 'Puncto nasce para resolver os problemas de gestão de serviços' },
-  { year: '2024', title: 'Lançamento', description: 'Primeira versão lançada com agendamento e pagamentos' },
-  { year: '2024', title: '100 clientes', description: 'Marco de 100 negócios usando a plataforma' },
-  { year: '2025', title: 'Expansão', description: 'Módulos de restaurante, estoque e ponto eletrônico' },
-  { year: '2025', title: '500+ clientes', description: 'Mais de 500 negócios confiam no Puncto' },
+  { year: '2023', title: 'Fundação', description: 'Puncto nasce para simplificar a gestão de negócios de serviços no Brasil' },
+  { year: '2024', title: 'Lançamento', description: 'Primeira versão da plataforma com agendamento e pagamentos integrados' },
 ];
 
 export default function AboutPage() {
@@ -103,21 +80,20 @@ export default function AboutPage() {
               <h2 className="heading-lg text-slate-900 mb-6">Nossa história</h2>
               <div className="space-y-4 text-slate-600">
                 <p>
-                  O Puncto nasceu em 2023, quando dois empreendedores – uma
-                  ex-gerente de salões de beleza e um engenheiro de software –
-                  decidiram que era hora de mudar a forma como pequenos negócios
-                  gerenciam suas operações.
+                  O Puncto nasceu em 2023 com uma visão dupla: oferecer uma plataforma 
+                  SaaS acessível para pequenos e médios negócios de serviços, e também 
+                  desenvolver sistemas customizados para grandes empresas e indústrias.
                 </p>
                 <p>
-                  Cansados de ver empresários perdendo clientes por no-shows,
-                  desperdiçando horas em planilhas e usando múltiplos sistemas
-                  desconectados, eles criaram o Puncto: uma plataforma única que
-                  reúne tudo o que um negócio de serviços precisa.
+                  Para pequenos negócios, criamos uma plataforma completa que reúne 
+                  agendamento, pagamentos, estoque e gestão em um único sistema simples 
+                  e acessível. Para grandes empresas, desenvolvemos soluções sob medida 
+                  que se integram aos processos existentes e resolvem desafios específicos.
                 </p>
                 <p>
-                  Hoje, ajudamos mais de 500 negócios em todo o Brasil a
-                  economizar tempo, reduzir falhas e aumentar sua receita. E
-                  estamos apenas começando.
+                  Nossa missão é tornar a tecnologia acessível para todos os tamanhos 
+                  de negócio, seja através de nossa plataforma SaaS pronta para uso ou 
+                  através de desenvolvimento customizado para necessidades específicas.
                 </p>
               </div>
             </motion.div>
@@ -267,31 +243,39 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {teamMembers.map((member, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-soft border border-slate-100 text-center"
-              >
-                <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-bold text-primary-600">
-                    {member.name.charAt(0)}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {member.name}
-                </h3>
-                <p className="text-primary-600 text-sm font-medium mb-2">
-                  {member.role}
-                </p>
-                <p className="text-slate-600 text-sm">{member.bio}</p>
-              </motion.div>
-            ))}
-          </div>
+          {teamMembers.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {teamMembers.map((member, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white rounded-xl p-6 shadow-soft border border-slate-100 text-center"
+                >
+                  <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl font-bold text-primary-600">
+                      {member.name.charAt(0)}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {member.name}
+                  </h3>
+                  <p className="text-primary-600 text-sm font-medium mb-2">
+                    {member.role}
+                  </p>
+                  <p className="text-slate-600 text-sm">{member.bio}</p>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-slate-600">
+                Informações da equipe serão adicionadas em breve.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -329,33 +313,13 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                outlet: 'Exame',
-                quote: 'Startup brasileira promete revolucionar gestão de salões',
-              },
-              {
-                outlet: 'Startups',
-                quote: 'Puncto levanta rodada seed para expandir plataforma',
-              },
-              {
-                outlet: 'TechCrunch Brasil',
-                quote: 'SaaS vertical ganha força no mercado brasileiro',
-              },
-            ].map((press, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-soft border border-slate-100"
-              >
-                <p className="text-slate-600 mb-4">&ldquo;{press.quote}&rdquo;</p>
-                <p className="font-semibold text-slate-900">{press.outlet}</p>
-              </motion.div>
-            ))}
+          <div className="text-center py-12">
+            <p className="text-slate-600 mb-4">
+              Materiais de imprensa serão adicionados quando disponíveis.
+            </p>
+            <p className="text-sm text-slate-500">
+              Para solicitações de imprensa, entre em contato através do formulário abaixo.
+            </p>
           </div>
 
           <div className="text-center mt-8">

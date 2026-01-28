@@ -122,7 +122,6 @@ export default function TermsPage() {
           </p>
           <ul>
             <li>Email: legal@puncto.com.br</li>
-            <li>Endereço: Av. Paulista, 1000 - São Paulo, SP</li>
           </ul>
         </div>
       </div>

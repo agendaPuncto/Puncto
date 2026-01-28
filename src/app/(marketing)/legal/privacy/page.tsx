@@ -150,7 +150,6 @@ export default function PrivacyPage() {
           </p>
           <ul>
             <li>Email do DPO: privacidade@puncto.com.br</li>
-            <li>Endereço: Av. Paulista, 1000 - São Paulo, SP</li>
           </ul>
         </div>
       </div>

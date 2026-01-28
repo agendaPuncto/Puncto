@@ -8,8 +8,6 @@ import Hero from '@/components/marketing/Hero';
 import FeatureCard from '@/components/marketing/FeatureCard';
 import FAQAccordion from '@/components/marketing/FAQAccordion';
 import CTASection from '@/components/marketing/CTASection';
-import StatsCounter from '@/components/marketing/StatsCounter';
-import TestimonialCard, { testimonials } from '@/components/marketing/TestimonialCard';
 import PricingCard, { pricingPlans } from '@/components/marketing/PricingCard';
 
 import { features } from '@/content/features';
@@ -27,11 +25,8 @@ export default function HomePage() {
       {/* Hero Section */}
       <Hero />
 
-      {/* Stats Section */}
-      <StatsCounter />
-
       {/* Features Section */}
-      <section className="section bg-white">
+      <section id="solucoes" className="section bg-white">
         <div className="container-marketing">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -44,8 +39,8 @@ export default function HomePage() {
               Tudo que você precisa em um só lugar
             </h2>
             <p className="body-lg max-w-2xl mx-auto">
-              Do agendamento ao relatório financeiro, o Puncto oferece todas as
-              ferramentas para gerenciar seu negócio de forma simples e eficiente.
+              Plataforma SaaS completa para pequenos negócios ou desenvolvimento 
+              customizado para grandes empresas. Soluções que se adaptam ao seu negócio.
             </p>
           </motion.div>
 
@@ -209,7 +204,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Custom Development Section */}
       <section className="section bg-white">
         <div className="container-marketing">
           <motion.div
@@ -218,23 +213,122 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <span className="badge-accent mb-4">Depoimentos</span>
+            <span className="badge-primary mb-4">Desenvolvimento Customizado</span>
             <h2 className="heading-lg text-slate-900 mb-4">
-              O que nossos clientes dizem
+              Soluções sob medida para grandes empresas
             </h2>
             <p className="body-lg max-w-2xl mx-auto">
-              Milhares de negócios já transformaram sua gestão com o Puncto.
+              Para indústrias, fábricas e grandes corporações, desenvolvemos sistemas 
+              personalizados que se integram aos seus processos existentes.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard
-                key={testimonial.id}
-                testimonial={testimonial}
-                index={index}
-              />
-            ))}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-br from-primary-50 to-white rounded-2xl p-8 border border-primary-100"
+            >
+              <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mb-6">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              </div>
+              <h3 className="heading-sm text-slate-900 mb-4">
+                Plataforma SaaS
+              </h3>
+              <p className="text-slate-600 mb-6">
+                Ideal para salões, restaurantes, clínicas e pequenos negócios. 
+                Comece em minutos com planos a partir de R$ 99/mês.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start gap-2 text-slate-600">
+                  <svg className="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Ativação imediata</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-600">
+                  <svg className="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Sem necessidade de desenvolvimento</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-600">
+                  <svg className="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Atualizações automáticas</span>
+                </li>
+              </ul>
+              <Link href="/pricing" className="btn-primary w-full text-center">
+                Ver Planos SaaS
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 text-white"
+            >
+              <div className="w-12 h-12 bg-secondary-500 rounded-xl flex items-center justify-center mb-6">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  />
+                </svg>
+              </div>
+              <h3 className="heading-sm text-white mb-4">
+                Desenvolvimento Customizado
+              </h3>
+              <p className="text-slate-300 mb-6">
+                Para indústrias, fábricas e grandes empresas. Sistemas sob medida 
+                que resolvem desafios específicos do seu negócio.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-secondary-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Desenvolvimento sob medida</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-secondary-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Integração com sistemas legados</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-300">
+                  <svg className="w-5 h-5 text-secondary-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Suporte e evolução contínua</span>
+                </li>
+              </ul>
+              <Link href="https://wa.me/5541991626161" target="_blank" className="btn bg-white text-slate-900 hover:bg-slate-100 w-full text-center">
+                Solicitar Orçamento
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -344,7 +438,7 @@ export default function HomePage() {
       {/* Final CTA Section */}
       <CTASection
         title="Pronto para transformar seu negócio?"
-        description="Junte-se a mais de 500 empresas que já simplificaram sua gestão com o Puncto."
+        description="Comece gratuitamente e descubra como o Puncto pode simplificar a gestão do seu negócio."
         primaryCTA={{ text: 'Começar Grátis', href: '/auth/signup' }}
         secondaryCTA={{ text: 'Agendar Demonstração', href: '/demo' }}
         variant="gradient"

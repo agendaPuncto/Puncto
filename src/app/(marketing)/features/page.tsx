@@ -106,10 +106,6 @@ export default function FeaturesPage() {
                       </div>
                       <div>
                         <h2 className="heading-md text-slate-900">{feature.title}</h2>
-                        <div className="badge-secondary mt-1">
-                          <span className="font-bold">{feature.stats.value}</span>{' '}
-                          {feature.stats.label}
-                        </div>
                       </div>
                     </div>
 
@@ -281,16 +277,16 @@ export default function FeaturesPage() {
               </ul>
               <div className="flex gap-4">
                 <Link
-                  href="https://docs.puncto.com.br"
+                  href="/contact"
                   className="btn bg-white text-slate-900 hover:bg-slate-100"
                 >
-                  Ver Documentação
+                  Solicitar Acesso à API
                 </Link>
                 <Link
-                  href="/contact"
+                  href="/pricing"
                   className="btn bg-transparent text-white border border-slate-600 hover:bg-slate-800"
                 >
-                  Falar com Engenharia
+                  Ver Planos com API
                 </Link>
               </div>
             </motion.div>
@@ -308,9 +304,9 @@ export default function FeaturesPage() {
                 <span className="ml-2">api-example.ts</span>
               </div>
               <pre className="text-slate-300">
-                <code>{`// Criar um agendamento via API
+                <code>{`// Exemplo de uso da API REST
 const response = await fetch(
-  'https://api.puncto.com.br/v1/bookings',
+  '/api/bookings',
   {
     method: 'POST',
     headers: {

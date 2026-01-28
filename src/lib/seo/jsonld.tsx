@@ -8,26 +8,16 @@ export function generateOrganizationSchema() {
     url: 'https://puncto.com.br',
     logo: 'https://puncto.com.br/logo.png',
     description:
-      'Plataforma completa de gestão para salões, restaurantes, clínicas e outros negócios de serviços.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Av. Paulista, 1000',
-      addressLocality: 'São Paulo',
-      addressRegion: 'SP',
-      postalCode: '01310-100',
-      addressCountry: 'BR',
-    },
+      'Plataforma SaaS completa para salões, restaurantes, clínicas e desenvolvimento customizado para grandes empresas e indústrias.',
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+55-11-99999-9999',
       contactType: 'customer service',
-      availableLanguage: ['Portuguese', 'English', 'Spanish'],
+      availableLanguage: ['Portuguese', 'English'],
     },
     sameAs: [
       'https://linkedin.com/company/puncto',
       'https://instagram.com/puncto.app',
       'https://youtube.com/@puncto',
-      'https://discord.gg/puncto',
     ],
   };
 }
@@ -57,12 +47,6 @@ export function generateSoftwareApplicationSchema() {
       '@type': 'Offer',
       price: '99',
       priceCurrency: 'BRL',
-      priceValidUntil: '2025-12-31',
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      ratingCount: '500',
     },
   };
 }

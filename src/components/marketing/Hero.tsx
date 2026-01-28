@@ -24,7 +24,7 @@ export default function Hero() {
             >
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-medium mb-6">
                 <span className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
-                Mais de 500 negócios já transformaram sua gestão
+                Plataforma SaaS + Desenvolvimento Customizado
               </span>
             </motion.div>
 
@@ -35,9 +35,8 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Simplifique a gestão do seu{' '}
-              <span className="text-gradient">negócio</span> em uma única
-              plataforma
+              Transforme processos manuais em{' '}
+              <span className="text-gradient">inteligência e lucro</span>
             </motion.h1>
 
             {/* Subheadline */}
@@ -47,9 +46,9 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Agendamentos, pagamentos, controle de equipe, estoque e muito mais.
-              Tudo integrado para salões, restaurantes, clínicas e outros
-              negócios de serviços.
+              Plataforma SaaS completa para salões, restaurantes e clínicas. 
+              E também desenvolvemos sistemas sob medida para indústrias e grandes empresas. 
+              Tecnologia que se adapta ao seu negócio.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -59,8 +58,9 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Link href="/auth/signup" className="btn-primary btn-lg w-full sm:w-auto">
-                Começar Grátis
+              {/* Link WhatsApp Business */}
+              <Link href="https://wa.me/5541991626161" target="_blank" className="btn-primary btn-lg w-full sm:w-auto">
+                Agendar Diagnóstico Gratuito
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -75,27 +75,8 @@ export default function Hero() {
                   />
                 </svg>
               </Link>
-              <Link href="/demo" className="btn-secondary btn-lg w-full sm:w-auto">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Ver Demonstração
+              <Link href="#solucoes" className="btn-secondary btn-lg w-full sm:w-auto">
+                Ver Soluções
               </Link>
             </motion.div>
 
@@ -107,52 +88,22 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
+                <svg className="w-5 h-5 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                14 dias grátis
+                Atendimento Humanizado
               </div>
               <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
+                <svg className="w-5 h-5 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Sem cartão de crédito
+                Projetos Exclusivos
               </div>
               <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
+                <svg className="w-5 h-5 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Cancele quando quiser
+                Foco em Resultado
               </div>
             </motion.div>
           </div>
@@ -165,83 +116,41 @@ export default function Hero() {
             transition={{ duration: 0.7, delay: 0.5 }}
           >
             <div className="relative max-w-5xl mx-auto">
-              {/* Browser mockup */}
               <div className="bg-slate-900 rounded-t-2xl p-3 flex items-center gap-2">
-                <div className="flex gap-1.5">
+                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                 </div>
+                {/* Endereço fake */}
                 <div className="flex-1 flex justify-center">
                   <div className="bg-slate-800 rounded-lg px-4 py-1.5 text-slate-400 text-sm">
-                    demo.puncto.com.br
+                    Painel Administrativo Puncto
                   </div>
                 </div>
               </div>
-              {/* Dashboard preview */}
+              
               <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-b-2xl aspect-[16/9] flex items-center justify-center shadow-2xl border border-slate-200">
                 <div className="text-slate-400 text-center p-8">
-                  <svg
-                    className="w-16 h-16 mx-auto mb-4 text-slate-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
+                  <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-lg font-medium">Dashboard Preview</p>
-                  <p className="text-sm">Imagem do dashboard será exibida aqui</p>
+                  <p className="text-lg font-medium">Painel Administrativo Puncto</p>
+                  <p className="text-sm">Gestão completa do seu negócio em um só lugar</p>
                 </div>
               </div>
-              {/* Floating cards decoration */}
+              
+              {/* Card flutuante 1 */}
               <div className="absolute -left-8 top-1/4 bg-white rounded-xl shadow-soft-lg p-4 hidden lg:block animate-float">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-secondary-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
+                    <svg className="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Agendamento confirmado</p>
-                    <p className="text-xs text-slate-500">Há 2 minutos</p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -right-8 bottom-1/4 bg-white rounded-xl shadow-soft-lg p-4 hidden lg:block animate-float" style={{ animationDelay: '1s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-primary-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">PIX recebido</p>
-                    <p className="text-xs text-slate-500">R$ 150,00</p>
+                    <p className="text-sm font-medium text-slate-900">Relatório Gerado</p>
+                    <p className="text-xs text-slate-500">Automação concluída</p>
                   </div>
                 </div>
               </div>

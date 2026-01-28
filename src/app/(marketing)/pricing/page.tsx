@@ -169,7 +169,7 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="section-sm bg-white -mt-8">
         <div className="container-marketing">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-4 max-w-5xl mx-auto">
             {pricingPlans.map((plan, index) => (
               <PricingCard
                 key={plan.id}
@@ -306,20 +306,20 @@ export default function PricingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="heading-lg text-white mb-4">
-                Precisa de algo personalizado?
+                Desenvolvimento Customizado
               </h2>
               <p className="text-slate-300 text-lg mb-6">
-                Para redes, franquias ou necessidades específicas, nosso plano
-                Enterprise oferece flexibilidade total. Fale com nossa equipe
-                comercial.
+                Para indústrias, fábricas e grandes empresas, desenvolvemos sistemas 
+                sob medida que se integram aos seus processos existentes e resolvem 
+                desafios específicos do seu negócio.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  'Integrações customizadas',
-                  'SLA garantido',
-                  'Gerente de sucesso dedicado',
-                  'Treinamento presencial',
-                  'White-label completo',
+                  'Sistemas desenvolvidos sob medida',
+                  'Integração com sistemas legados',
+                  'Automação de processos industriais',
+                  'Dashboards e relatórios personalizados',
+                  'Suporte e evolução contínua',
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <svg className="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,8 +329,8 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/contact?plan=enterprise" className="btn bg-white text-slate-900 hover:bg-slate-100">
-                Falar com Vendas
+              <Link href="https://wa.me/5541991626161" target="_blank" className="btn bg-white text-slate-900 hover:bg-slate-100">
+                Solicitar Orçamento
               </Link>
             </div>
             <div className="bg-slate-800 rounded-2xl p-8">
@@ -340,13 +340,13 @@ export default function PricingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Enterprise</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Customizado</h3>
                 <p className="text-slate-400 mb-6">
-                  Solução sob medida para grandes operações
+                  Desenvolvimento sob medida para indústrias e grandes empresas
                 </p>
-                <div className="text-4xl font-bold text-white mb-2">Personalizado</div>
+                <div className="text-4xl font-bold text-white mb-2">Sob Medida</div>
                 <p className="text-slate-400 text-sm">
-                  Preço baseado em suas necessidades
+                  Orçamento baseado no escopo do projeto
                 </p>
               </div>
             </div>

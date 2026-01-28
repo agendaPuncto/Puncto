@@ -12,11 +12,10 @@ const footerLinks = {
     { name: 'Changelog', href: '/blog' },
   ],
   setores: [
-    { name: 'Salões de Beleza', href: '/industries/salons' },
-    { name: 'Restaurantes', href: '/industries/restaurants' },
-    { name: 'Clínicas', href: '/industries/clinics' },
-    { name: 'Padarias', href: '/industries/bakeries' },
-    { name: 'Eventos', href: '/industries/events' },
+    { name: 'Prestadores de Serviço', href: '/industries/servicos' },
+    { name: 'Comércio e Varejo', href: '/industries/varejo' },
+    { name: 'Gestão Corporativa', href: '/industries/corporativo' },
+    { name: 'Todos os Setores', href: '/industries' },
   ],
   empresa: [
     { name: 'Sobre Nós', href: '/about' },

@@ -128,12 +128,8 @@ export default function LGPDPage() {
               solicitações dos titulares e atuar como canal de comunicação
               com a ANPD.
             </p>
-            <p className="font-medium text-slate-900">
-              Encarregado: [Nome do DPO]
-            </p>
             <p className="text-slate-600">
-              Email: dpo@puncto.com.br<br />
-              Endereço: Av. Paulista, 1000 - São Paulo, SP - CEP 01310-100
+              Email: privacidade@puncto.com.br
             </p>
           </div>
 
