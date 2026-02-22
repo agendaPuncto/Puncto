@@ -5,6 +5,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'i.pravatar.cc' }
     ]
-  }
+  },
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
 };
 export default nextConfig;
