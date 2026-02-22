@@ -22,12 +22,15 @@ export function useProfessionals(businessId: string, filters?: { active?: boolea
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
-        updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt,
-      })) as Professional[];
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Record<string, any>;
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        } as Professional;
+      });
     },
     enabled: !!businessId,
   });
@@ -47,7 +50,7 @@ export function useProfessional(businessId: string, professionalId: string) {
         throw new Error('Professional not found');
       }
 
-      const data = snapshot.data();
+      const data = snapshot.data() as Record<string, any>;
       return {
         id: snapshot.id,
         ...data,
