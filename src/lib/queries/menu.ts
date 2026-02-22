@@ -25,12 +25,15 @@ export async function getProducts(businessId: string): Promise<Product[]> {
   const q = query(productsRef, orderBy('displayOrder', 'asc'), orderBy('name', 'asc'));
   const snapshot = await getDocs(q);
   
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
-    updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-  })) as Product[];
+  return snapshot.docs.map((doc) => {
+    const data = doc.data() as Record<string, any>;
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    } as Product;
+  });
 }
 
 /**
@@ -49,12 +52,15 @@ export async function getProductsByCategory(
   );
   const snapshot = await getDocs(q);
   
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
-    updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-  })) as Product[];
+  return snapshot.docs.map((doc) => {
+    const data = doc.data() as Record<string, any>;
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    } as Product;
+  });
 }
 
 /**
@@ -68,11 +74,12 @@ export async function getProduct(businessId: string, productId: string): Promise
     return null;
   }
   
+  const data = productSnap.data() as Record<string, any>;
   return {
     id: productSnap.id,
-    ...productSnap.data(),
-    createdAt: productSnap.data().createdAt?.toDate() || new Date(),
-    updatedAt: productSnap.data().updatedAt?.toDate() || new Date(),
+    ...data,
+    createdAt: data.createdAt?.toDate() || new Date(),
+    updatedAt: data.updatedAt?.toDate() || new Date(),
   } as Product;
 }
 
@@ -124,12 +131,15 @@ export async function getMenuCategories(businessId: string): Promise<MenuCategor
   const q = query(categoriesRef, where('active', '==', true), orderBy('displayOrder', 'asc'));
   const snapshot = await getDocs(q);
   
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
-    updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-  })) as MenuCategory[];
+  return snapshot.docs.map((doc) => {
+    const data = doc.data() as Record<string, any>;
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    } as MenuCategory;
+  });
 }
 
 /**

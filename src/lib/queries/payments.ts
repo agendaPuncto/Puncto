@@ -40,7 +40,10 @@ export function usePayments(businessId: string) {
       const paymentsRef = collection(db, 'businesses', businessId, 'payments');
       const q = query(paymentsRef, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Payment));
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Record<string, any>;
+        return { id: doc.id, ...data } as Payment;
+      });
     },
     enabled: !!businessId,
   });
@@ -55,7 +58,8 @@ export function usePayment(paymentId: string, businessId: string) {
       if (snapshot.empty) {
         throw new Error('Payment not found');
       }
-      return { id: paymentId, ...snapshot.docs[0].data() } as Payment;
+      const data = snapshot.docs[0].data() as Record<string, any>;
+      return { id: paymentId, ...data } as Payment;
     },
     enabled: !!paymentId && !!businessId,
   });
