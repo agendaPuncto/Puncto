@@ -42,14 +42,17 @@ export function useBookings(businessId: string, filters?: {
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        scheduledDateTime: doc.data().scheduledDateTime?.toDate?.() || doc.data().scheduledDateTime,
-        endDateTime: doc.data().endDateTime?.toDate?.() || doc.data().endDateTime,
-        createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
-        updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt,
-      })) as Booking[];
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as Record<string, any>;
+        return {
+          id: doc.id,
+          ...data,
+          scheduledDateTime: data.scheduledDateTime?.toDate?.() || data.scheduledDateTime,
+          endDateTime: data.endDateTime?.toDate?.() || data.endDateTime,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        } as Booking;
+      });
     },
     enabled: !!businessId,
   });
