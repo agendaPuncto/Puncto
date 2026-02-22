@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const professionals: any[] = [];
 
     for (const businessDoc of businessesSnapshot.docs) {
-      const business = { id: businessDoc.id, ...businessDoc.data() };
+      const business = { id: businessDoc.id, ...businessDoc.data() } as Record<string, any> & { id: string };
 
       // Apply filters
       if (query && !business.displayName?.toLowerCase().includes(query.toLowerCase()) &&

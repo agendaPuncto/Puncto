@@ -99,14 +99,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
                  subscription.status === 'past_due' ? 'suspended' :
                  'cancelled';
 
+  const sub = subscription as any;
   await businessRef.update({
     'subscription.tier': tier,
     'subscription.status': status,
     'subscription.stripeSubscriptionId': subscription.id,
     'subscription.stripePriceId': priceId,
-    'subscription.currentPeriodStart': Timestamp.fromMillis(subscription.current_period_start * 1000),
-    'subscription.currentPeriodEnd': Timestamp.fromMillis(subscription.current_period_end * 1000),
-    'subscription.cancelAtPeriodEnd': subscription.cancel_at_period_end || false,
+    'subscription.currentPeriodStart': Timestamp.fromMillis(sub.current_period_start * 1000),
+    'subscription.currentPeriodEnd': Timestamp.fromMillis(sub.current_period_end * 1000),
+    'subscription.cancelAtPeriodEnd': sub.cancel_at_period_end || false,
     updatedAt: Timestamp.now(),
   });
 
@@ -127,18 +128,20 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  const businessId = invoice.metadata?.businessId;
+  const inv = invoice as any;
+  const businessId = inv.metadata?.businessId;
   if (!businessId) return;
 
   // Update subscription status if needed
-  if (invoice.subscription) {
-    const subscription = await invoice.subscription as Stripe.Subscription;
+  if (inv.subscription) {
+    const subscription = inv.subscription as Stripe.Subscription;
     await handleSubscriptionUpdate(subscription);
   }
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  const businessId = invoice.metadata?.businessId;
+  const inv = invoice as any;
+  const businessId = inv.metadata?.businessId;
   if (!businessId) return;
 
   const businessRef = db.collection('businesses').doc(businessId);

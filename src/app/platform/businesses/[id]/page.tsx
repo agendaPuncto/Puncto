@@ -7,6 +7,14 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { Business } from '@/types/business';
 import { getBusinessTypeLabel } from '@/lib/features/businessTypeFeatures';
 
+function formatDate(dateOrTimestamp: any): string {
+  if (!dateOrTimestamp) return 'N/A';
+  const date = dateOrTimestamp instanceof Date 
+    ? dateOrTimestamp 
+    : dateOrTimestamp?.toDate?.() || new Date(dateOrTimestamp);
+  return date.toLocaleDateString('pt-BR');
+}
+
 export default function PlatformBusinessDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -161,8 +169,8 @@ export default function PlatformBusinessDetailPage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Current Period</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(business.subscription.currentPeriodStart).toLocaleDateString('pt-BR')} -{' '}
-                  {new Date(business.subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}
+                  {formatDate(business.subscription.currentPeriodStart)} -{' '}
+                  {formatDate(business.subscription.currentPeriodEnd)}
                 </dd>
               </div>
               {business.subscription.stripeCustomerId && (
@@ -186,13 +194,13 @@ export default function PlatformBusinessDetailPage() {
               <div>
                 <dt className="text-sm text-gray-500">Created</dt>
                 <dd className="text-sm font-medium text-gray-900">
-                  {new Date(business.createdAt).toLocaleDateString('pt-BR')}
+                  {formatDate(business.createdAt)}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Last Updated</dt>
                 <dd className="text-sm font-medium text-gray-900">
-                  {new Date(business.updatedAt).toLocaleDateString('pt-BR')}
+                  {formatDate(business.updatedAt)}
                 </dd>
               </div>
             </dl>

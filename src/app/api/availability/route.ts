@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
       durationMinutes,
       0, // buffer minutes
       {
-        professionalId,
-        serviceId,
+        professionalId: professionalId ?? undefined,
+        serviceId: serviceId ?? undefined,
         existingBookings,
       }
     );

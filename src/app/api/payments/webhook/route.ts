@@ -84,7 +84,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
     stripeCheckoutSessionId: session.id,
     metadata,
-    description: session.description || undefined,
+    description: (session as any).description || undefined,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
     succeededAt: Timestamp.now(),
@@ -208,13 +208,13 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
   // Create refund record
   const refundData = {
-    id: charge.refunds.data[0]?.id || `ref_${Date.now()}`,
+    id: charge.refunds?.data[0]?.id || `ref_${Date.now()}`,
     paymentId,
     amount: refundAmount,
     currency: charge.currency,
     reason: 'requested_by_customer',
     status: 'succeeded' as const,
-    stripeRefundId: charge.refunds.data[0]?.id || '',
+    stripeRefundId: charge.refunds?.data[0]?.id || '',
     createdAt: Timestamp.now(),
     processedAt: Timestamp.now(),
   };

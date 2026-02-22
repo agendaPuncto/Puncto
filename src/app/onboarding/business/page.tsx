@@ -104,7 +104,7 @@ export default function OnboardingBusinessPage() {
         email,
         phone: phone.replace(/\D/g, ''), // Remove formatting
         industry,
-        createdBy: user?.uid,
+        createdBy: user?.id,
       };
 
       sessionStorage.setItem('onboarding_business', JSON.stringify(businessData));

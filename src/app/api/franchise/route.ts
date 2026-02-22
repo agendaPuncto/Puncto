@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const business = { id: businessDoc.id, ...businessDoc.data() };
-    const isFranchiseGroup = business.isFranchiseGroup || false;
-    const franchiseGroupId = business.franchiseGroupId;
+    const businessData = businessDoc.data() as Record<string, any>;
+    const isFranchiseGroup = businessData.isFranchiseGroup || false;
+    const franchiseGroupId = businessData.franchiseGroupId;
 
     let franchiseData: any = {
       isFranchiseGroup,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (isFranchiseGroup) {
       // Get all franchise units
-      const franchiseUnitIds = business.franchiseUnits || [];
+      const franchiseUnitIds = businessData.franchiseUnits || [];
       const units: any[] = [];
       
       for (const unitId of franchiseUnitIds) {

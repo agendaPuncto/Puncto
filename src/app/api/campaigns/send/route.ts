@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { Campaign, CampaignType } from '@/types/crm';
 import { Customer } from '@/types/booking';
-import { sendWhatsAppMessage } from '@/lib/messaging/whatsapp';
+import { sendWhatsApp, formatPhoneNumber } from '@/lib/messaging/whatsapp';
 import { sendEmail } from '@/lib/messaging/email';
 
 // POST - Send campaign
@@ -88,10 +88,10 @@ export async function POST(request: NextRequest) {
         const message = replaceTemplateVariables(campaign.template, customer);
 
         if (campaign.type === 'whatsapp' && customer.phone) {
-          await sendWhatsAppMessage(customer.phone, message);
+          await sendWhatsApp({ to: formatPhoneNumber(customer.phone), text: message });
           delivered++;
         } else if (campaign.type === 'email' && customer.email) {
-          await sendEmail(customer.email, campaign.name, message);
+          await sendEmail({ to: customer.email, subject: campaign.name, html: message });
           delivered++;
         }
 

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const webhook = {
       id: webhookDoc.id,
       ...webhookDoc.data(),
-    };
+    } as Record<string, any> & { id: string };
 
     if (!webhook.active) {
       return NextResponse.json(

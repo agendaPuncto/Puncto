@@ -10,6 +10,14 @@ interface BusinessListItem extends Partial<Business> {
   id: string;
 }
 
+function formatDate(dateOrTimestamp: any): string {
+  if (!dateOrTimestamp) return '-';
+  const date = dateOrTimestamp instanceof Date 
+    ? dateOrTimestamp 
+    : dateOrTimestamp?.toDate?.() || new Date(dateOrTimestamp);
+  return date.toLocaleDateString('pt-BR');
+}
+
 export default function PlatformBusinessesPage() {
   const { firebaseUser } = useAuth();
   const [businesses, setBusinesses] = useState<BusinessListItem[]>([]);
@@ -246,9 +254,7 @@ export default function PlatformBusinessesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {business.createdAt
-                      ? new Date(business.createdAt).toLocaleDateString('pt-BR')
-                      : '-'}
+                    {formatDate(business.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">

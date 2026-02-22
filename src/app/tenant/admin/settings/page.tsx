@@ -109,7 +109,7 @@ export default function AdminSettingsPage() {
             business={business}
             branding={business?.branding || { gallery: [] }}
             hasWhiteLabel={hasWhiteLabel}
-            onSave={(branding) => brandingMutation.mutate(branding)}
+            onSave={(branding: any) => brandingMutation.mutate(branding)}
             isLoading={brandingMutation.isPending}
           />
         )}

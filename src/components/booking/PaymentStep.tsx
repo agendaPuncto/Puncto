@@ -70,7 +70,7 @@ export function PaymentStep({
         // If we have session ID but no URL, load Stripe and redirect
         const stripe = await loadStripe(getStripePublishableKey());
         if (stripe) {
-          await stripe.redirectToCheckout({ sessionId: result.sessionId });
+          await (stripe as any).redirectToCheckout({ sessionId: result.sessionId });
         }
       }
     } catch (error) {

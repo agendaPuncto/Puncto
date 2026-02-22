@@ -6,7 +6,11 @@ import { resolvers } from '@/lib/graphql/resolvers';
 import { authenticateApiRequest } from '@/lib/api/authentication';
 import { GraphQLError } from 'graphql';
 
-const server = new ApolloServer({
+interface GraphQLContext {
+  businessId: string;
+}
+
+const server = new ApolloServer<GraphQLContext>({
   typeDefs,
   resolvers,
   formatError: (error) => {
@@ -18,7 +22,7 @@ const server = new ApolloServer({
   },
 });
 
-const handler = startServerAndCreateNextHandler<NextRequest>(server, {
+const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(server, {
   context: async (req: NextRequest) => {
     // Authenticate API request
     const authResult = await authenticateApiRequest(req);

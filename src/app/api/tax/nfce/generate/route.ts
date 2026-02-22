@@ -68,9 +68,10 @@ export async function POST(request: NextRequest) {
     const nfceData = prepareNFCeData(order, business);
 
     // Get tax provider configuration from business settings
-    const taxProvider = provider || business.settings?.taxProvider || 'tecnospeed';
-    const apiKey = business.settings?.taxApiKey || '';
-    const apiUrl = business.settings?.taxApiUrl || '';
+    const settings = business.settings as any;
+    const taxProvider = provider || settings?.taxProvider || 'tecnospeed';
+    const apiKey = settings?.taxApiKey || '';
+    const apiUrl = settings?.taxApiUrl || '';
 
     if (!apiKey || !apiUrl) {
       return NextResponse.json(

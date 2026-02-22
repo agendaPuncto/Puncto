@@ -13,7 +13,7 @@ export default function TimeClockPage() {
   const [lastClockIn, setLastClockIn] = useState<{ type: ClockInType; timestamp: Date } | null>(null);
 
   const handleClockIn = async (type: ClockInType) => {
-    if (!business?.id || !user?.uid) return;
+    if (!business?.id || !user?.id) return;
 
     try {
       setIsSubmitting(true);
@@ -39,7 +39,7 @@ export default function TimeClockPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessId: business.id,
-          userId: user.uid,
+          userId: user.id,
           type,
           location,
           deviceId: 'web',

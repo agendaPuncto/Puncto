@@ -8,6 +8,7 @@ pnpm-lock.yaml
 .next
 out
 # Env
+.env
 .env.local
 .env.*
 serviceAccountKey.json
@@ -16,3 +17,5 @@ serviceAccountKey.json
 .DS_Store
 
 .claude
+.vercel
+.env*.local

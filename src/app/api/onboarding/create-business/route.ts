@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { app } from '@/lib/firebase/admin';
+import { Timestamp } from 'firebase-admin/firestore';
+import { auth, db } from '@/lib/firebaseAdmin';
 import { createSubscriptionCheckout, getOrCreateCustomer } from '@/lib/stripe/subscriptions';
 import { getFeaturesByTier } from '@/types/features';
-
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 export async function POST(request: NextRequest) {
   try {

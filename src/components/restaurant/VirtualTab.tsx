@@ -158,7 +158,7 @@ export function VirtualTab({
             <div className="pt-2 border-t border-neutral-200">
               <p className="text-sm font-medium text-neutral-700 mb-2">Pagamentos Divididos:</p>
               <div className="space-y-2">
-                {order.splitPayments.map((split, index) => (
+                {order.splitPayments.map((split: any, index) => (
                   <div key={index} className="flex items-center justify-between text-sm">
                     <span className="text-neutral-600">{split.userId}</span>
                     <div className="flex items-center gap-2">
