@@ -107,6 +107,25 @@ export function getBusinessSlug(): string | null {
 }
 
 /**
+ * Get business by slug (for path-based routes like /b/[slug] - dev/testing)
+ */
+export async function getBusinessBySlug(slug: string): Promise<Business | null> {
+  try {
+    const businessSnapshot = await db
+      .collection('businesses')
+      .where('slug', '==', slug)
+      .limit(1)
+      .get();
+    if (businessSnapshot.empty) return null;
+    const doc = businessSnapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as Business;
+  } catch (error) {
+    console.error('[Tenant] getBusinessBySlug error:', error);
+    return null;
+  }
+}
+
+/**
  * Serialize business for Client Components (converts Firestore Timestamps to ISO strings).
  * Server Components cannot pass class instances (e.g. Firestore Timestamp) to Client Components.
  */

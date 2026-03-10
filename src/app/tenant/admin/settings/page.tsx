@@ -1,7 +1,8 @@
 'use client';
 
 import { useBusiness } from '@/lib/contexts/BusinessContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { pricingPlans } from '@/components/marketing/PricingCard';
 import {
@@ -71,6 +72,7 @@ const DEFAULT_USAGE = {
 export default function AdminSettingsPage() {
   const { business } = useBusiness();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'general' | 'subscription' | 'branding'>('general');
 
   const brandingMutation = useMutation({
@@ -121,94 +123,7 @@ export default function AdminSettingsPage() {
 
       <div className="space-y-6">
         {activeTab === 'general' && (
-          <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <h2 className="text-lg font-semibold mb-4">Informações da Empresa</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Nome comercial</label>
-                <input
-                  type="text"
-                  value={business?.displayName || ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Razão social</label>
-                <input
-                  type="text"
-                  value={business?.legalName || ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  placeholder="—"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">CPF/CNPJ</label>
-                <input
-                  type="text"
-                  value={business?.taxId ? formatTaxId(business.taxId) : ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  placeholder="—"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={business?.email || ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Telefone</label>
-                <input
-                  type="tel"
-                  value={business?.phone || ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  placeholder="—"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Segmento</label>
-                <input
-                  type="text"
-                  value={business?.industry ? industryDisplayName(business.industry) : ''}
-                  readOnly
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  placeholder="—"
-                />
-              </div>
-              {business?.website && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Website</label>
-                  <input
-                    type="url"
-                    value={business.website}
-                    readOnly
-                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  />
-                </div>
-              )}
-              {business?.address && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Endereço</label>
-                  <input
-                    type="text"
-                    value={formatAddress(business.address)}
-                    readOnly
-                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
-                  />
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-neutral-500 mt-4">
-              Para alterar informações cadastrais, entre em contato com o suporte.
-            </p>
-          </div>
+          <GeneralSettings business={business} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['business', business?.id] }); router.refresh(); }} />
         )}
 
         {activeTab === 'subscription' && (
@@ -225,6 +140,297 @@ export default function AdminSettingsPage() {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+const WEEKDAYS: { key: keyof import('@/types/business').WorkingHours; label: string }[] = [
+  { key: 'monday', label: 'Segunda' },
+  { key: 'tuesday', label: 'Terça' },
+  { key: 'wednesday', label: 'Quarta' },
+  { key: 'thursday', label: 'Quinta' },
+  { key: 'friday', label: 'Sexta' },
+  { key: 'saturday', label: 'Sábado' },
+  { key: 'sunday', label: 'Domingo' },
+];
+
+const DEFAULT_WORKING_HOURS: import('@/types/business').WorkingHours = {
+  monday: { open: '09:00', close: '18:00', closed: false },
+  tuesday: { open: '09:00', close: '18:00', closed: false },
+  wednesday: { open: '09:00', close: '18:00', closed: false },
+  thursday: { open: '09:00', close: '18:00', closed: false },
+  friday: { open: '09:00', close: '18:00', closed: false },
+  saturday: { open: '09:00', close: '14:00', closed: false },
+  sunday: { open: '09:00', close: '14:00', closed: true },
+};
+
+function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: () => void }) {
+  const addr = business?.address || {};
+  const wh = business?.settings?.workingHours || DEFAULT_WORKING_HOURS;
+
+  const [formData, setFormData] = useState({
+    displayName: business?.displayName || '',
+    phone: business?.phone || '',
+    street: addr.street || '',
+    number: addr.number || '',
+    complement: addr.complement || '',
+    neighborhood: addr.neighborhood || '',
+    city: addr.city || '',
+    state: addr.state || '',
+    zipCode: addr.zipCode || '',
+    workingHours: { ...DEFAULT_WORKING_HOURS, ...wh } as typeof DEFAULT_WORKING_HOURS,
+  });
+
+  useEffect(() => {
+    const a = business?.address || {};
+    const w = business?.settings?.workingHours || {};
+    setFormData({
+      displayName: business?.displayName || '',
+      phone: business?.phone || '',
+      street: a.street || '',
+      number: a.number || '',
+      complement: a.complement || '',
+      neighborhood: a.neighborhood || '',
+      city: a.city || '',
+      state: a.state || '',
+      zipCode: a.zipCode || '',
+      workingHours: { ...DEFAULT_WORKING_HOURS, ...w } as typeof DEFAULT_WORKING_HOURS,
+    });
+  }, [business?.id, business?.displayName, business?.phone, business?.address, business?.settings?.workingHours]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await fetch(`/api/business?businessId=${business?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: data.displayName,
+          phone: data.phone,
+          address: {
+            street: data.street,
+            number: data.number,
+            complement: data.complement,
+            neighborhood: data.neighborhood,
+            city: data.city,
+            state: data.state,
+            zipCode: data.zipCode,
+            country: addr.country || 'BR',
+          },
+          workingHours: data.workingHours,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erro ao salvar');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      onSuccess();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
+
+  const updateWorkingHours = (day: keyof typeof formData.workingHours, field: string, value: string | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      workingHours: {
+        ...prev.workingHours,
+        [day]: { ...prev.workingHours[day], [field]: value },
+      },
+    }));
+  };
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-6">
+      <h2 className="text-lg font-semibold mb-4">Informações da Empresa</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Nome comercial *</label>
+            <input
+              type="text"
+              value={formData.displayName}
+              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Razão social</label>
+            <input
+              type="text"
+              value={business?.legalName || ''}
+              readOnly
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">CPF/CNPJ</label>
+            <input
+              type="text"
+              value={business?.taxId ? formatTaxId(business.taxId) : ''}
+              readOnly
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
+            <input type="email" value={business?.email || ''} readOnly className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Telefone</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Segmento</label>
+            <input
+              type="text"
+              value={business?.industry ? industryDisplayName(business.industry) : ''}
+              readOnly
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50"
+            />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium text-neutral-700 mb-3">Endereço</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Rua</label>
+              <input
+                type="text"
+                value={formData.street}
+                onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="Rua, avenida..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Número</label>
+              <input
+                type="text"
+                value={formData.number}
+                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="123"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Complemento</label>
+              <input
+                type="text"
+                value={formData.complement}
+                onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="Sala, andar..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Bairro</label>
+              <input
+                type="text"
+                value={formData.neighborhood}
+                onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="Bairro"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Cidade</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="Cidade"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">Estado</label>
+              <input
+                type="text"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="UF"
+                maxLength={2}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 mb-1">CEP</label>
+              <input
+                type="text"
+                value={formData.zipCode}
+                onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                placeholder="00000-000"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium text-neutral-700 mb-3">Horário de funcionamento</h3>
+          <p className="text-xs text-neutral-500 mb-3">Defina o horário em que seu negócio atende clientes (usado para disponibilidade de agendamentos)</p>
+          <div className="space-y-3">
+            {WEEKDAYS.map(({ key, label }) => (
+              <div key={key} className="flex flex-wrap items-center gap-4">
+                <span className="w-20 text-sm text-neutral-700">{label}</span>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.workingHours[key]?.closed ?? false}
+                    onChange={(e) => updateWorkingHours(key, 'closed', e.target.checked)}
+                    className="rounded border-neutral-300"
+                  />
+                  <span className="text-sm text-neutral-600">Fechado</span>
+                </label>
+                {!formData.workingHours[key]?.closed && (
+                  <>
+                    <input
+                      type="time"
+                      value={formData.workingHours[key]?.open || '09:00'}
+                      onChange={(e) => updateWorkingHours(key, 'open', e.target.value)}
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                    />
+                    <span className="text-neutral-400">até</span>
+                    <input
+                      type="time"
+                      value={formData.workingHours[key]?.close || '18:00'}
+                      onChange={(e) => updateWorkingHours(key, 'close', e.target.value)}
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                    />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {saveMutation.isError && (
+          <p className="text-sm text-red-600">{saveMutation.error instanceof Error ? saveMutation.error.message : 'Erro ao salvar'}</p>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {saveMutation.isPending ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -109,12 +109,16 @@ NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
 ```
 (Update this after first deployment with your actual domain)
 
-#### Optional: Email Service (SendGrid)
+#### Email Service (ZeptoMail - Recommended)
+Puncto uses ZeptoMail for transactional emails (booking confirmations, reminders, professional invites, campaigns).
 ```
-SENDGRID_API_KEY=SG....
-SENDGRID_FROM_EMAIL=noreply@puncto.com.br
-SENDGRID_FROM_NAME=Puncto
+ZEPTOMAIL_API_KEY=your_send_mail_token
+ZEPTOMAIL_FROM_EMAIL=noreply@your-verified-domain.com
+ZEPTOMAIL_FROM_NAME=Puncto
 ```
+Get your token from [ZeptoMail](https://www.zoho.com/zeptomail/) → Agents → SMTP/API → Send Mail Token.
+
+Alternative providers (Resend, Mailgun) are supported via `EMAIL_PROVIDER=resend` or `EMAIL_PROVIDER=mailgun` and their respective API keys.
 
 #### Optional: Platform Admin Secret
 ```

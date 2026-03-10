@@ -20,7 +20,10 @@ export default function AdminMenuPage() {
   const [categoryLoading, setCategoryLoading] = useState(false);
 
   const loadData = async () => {
-    if (!business?.id) return;
+    if (!business?.id) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -41,12 +44,46 @@ export default function AdminMenuPage() {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, [business?.id]);
+
   const handleEdit = (product: Product) => {
     router.push(`/tenant/admin/menu/${product.id}`);
   };
 
   const handleCreate = () => {
     router.push('/tenant/admin/menu/new');
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (!business?.id) return;
+    if (!confirm(`Excluir "${product.name}"?`)) return;
+    try {
+      const res = await fetch(
+        `/api/menu/${product.id}?businessId=${business.id}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error('Erro ao excluir produto');
+      loadData();
+    } catch {
+      alert('Erro ao excluir produto.');
+    }
+  };
+
+  const handleDeleteCategory = async (category: MenuCategory) => {
+    if (!business?.id) return;
+    try {
+      const res = await fetch(
+        `/api/menu/categories/${category.id}?businessId=${business.id}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error('Erro ao excluir categoria');
+      setSelectedCategory((prev) => (prev === category.id ? null : prev));
+      loadData();
+    } catch {
+      alert('Erro ao excluir categoria.');
+    }
   };
 
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -150,12 +187,18 @@ export default function AdminMenuPage() {
           categories={categories}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
+          onDeleteCategory={handleDeleteCategory}
         />
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredProducts.map((product) => (
-          <MenuCard key={product.id} product={product} onEdit={handleEdit} />
+          <MenuCard
+            key={product.id}
+            product={product}
+            onEdit={handleEdit}
+            onDelete={() => handleDeleteProduct(product)}
+          />
         ))}
 
         {filteredProducts.length === 0 && (

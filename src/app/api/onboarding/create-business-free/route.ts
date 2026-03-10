@@ -125,7 +125,26 @@ export async function POST(request: NextRequest) {
 
     await businessRef.set(businessData);
 
+    // Create owner as Professional so they appear in professional dashboard and agenda
     const userRecord = await auth.getUser(userId);
+    const prosRef = businessRef.collection('professionals');
+    const ownerProfessionalData = {
+      businessId,
+      userId,
+      name: userRecord.displayName || displayName || userRecord.email?.split('@')[0] || 'Proprietário',
+      email: userRecord.email || email,
+      phone,
+      specialties: [],
+      locationIds: [],
+      active: true,
+      canBookOnline: true,
+      isOwner: true,
+      workingHours: businessData.settings.workingHours,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await prosRef.add(ownerProfessionalData);
+
     const existingClaims = userRecord.customClaims || {};
 
     await auth.setCustomUserClaims(userId, {

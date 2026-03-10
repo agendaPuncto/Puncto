@@ -1,8 +1,20 @@
 import { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getCurrentBusiness, serializeBusinessForClient } from '@/lib/tenant';
 import { BusinessProvider } from '@/lib/contexts/BusinessContext';
 import { BrandingWrapper } from '@/components/branding/BrandingWrapper';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getCurrentBusiness();
+  if (!business) return { title: 'Puncto' };
+  return {
+    title: `${business.displayName} | Agendamento`,
+    ...(business.branding?.faviconUrl && {
+      icons: { icon: business.branding.faviconUrl },
+    }),
+  };
+}
 
 export default async function TenantLayout({
   children,

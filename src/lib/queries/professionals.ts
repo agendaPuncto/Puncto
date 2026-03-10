@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Professional } from '@/types/business';
 
 /**
@@ -81,6 +81,30 @@ export function useCreateProfessional(businessId: string) {
 
       const docRef = await addDoc(professionalsRef, data);
       return { id: docRef.id, ...data };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['professionals', businessId] });
+    },
+  });
+}
+
+/**
+ * Delete a professional (owner professionals cannot be deleted)
+ */
+export function useDeleteProfessional(businessId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (professionalId: string) => {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      const res = await fetch(`/api/professionals/${professionalId}?businessId=${businessId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erro ao excluir');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['professionals', businessId] });

@@ -1,5 +1,10 @@
 import { addMinutes, setHours, setMinutes, isBefore, isAfter, format } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import { WorkingHours } from '@/types/business';
+
+// Working hours keys are in English (monday, tuesday, etc.) - use enUS locale for consistency
+const getDayKey = (date: Date) =>
+  format(date, 'EEEE', { locale: enUS }).toLowerCase() as keyof WorkingHours;
 
 export interface TimeSlot {
   start: Date;
@@ -25,7 +30,7 @@ export function calculateAvailableSlots(
   bufferMinutes: number = 0,
   filters?: AvailabilityFilters
 ): TimeSlot[] {
-  const dayOfWeek = format(date, 'EEEE').toLowerCase() as keyof WorkingHours;
+  const dayOfWeek = getDayKey(date);
   const daySchedule = workingHours[dayOfWeek];
 
   if (!daySchedule || daySchedule.closed) {
@@ -96,7 +101,7 @@ export function isSlotAvailable(
   existingBookings: Array<{ start: Date; end: Date }> = [],
   blocks: Array<{ start: Date; end: Date }> = []
 ): boolean {
-  const dayOfWeek = format(startTime, 'EEEE').toLowerCase() as keyof WorkingHours;
+  const dayOfWeek = getDayKey(startTime);
   const daySchedule = workingHours[dayOfWeek];
 
   if (!daySchedule || daySchedule.closed) {

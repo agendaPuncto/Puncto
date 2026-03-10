@@ -31,7 +31,22 @@ export async function GET(request: NextRequest) {
     }
 
     const business = businessDoc.data();
-    const workingHours = business?.settings?.workingHours || {};
+    let workingHours = business?.settings?.workingHours || {};
+
+    // Use professional's working hours when professionalId provided and they have custom hours
+    if (professionalId) {
+      const proDoc = await db
+        .collection('businesses')
+        .doc(businessId)
+        .collection('professionals')
+        .doc(professionalId)
+        .get();
+      const proData = proDoc.data();
+      if (proData?.workingHours && Object.keys(proData.workingHours).length > 0) {
+        workingHours = proData.workingHours;
+      }
+    }
+
     const targetDate = new Date(date);
 
     // Fetch service to get duration

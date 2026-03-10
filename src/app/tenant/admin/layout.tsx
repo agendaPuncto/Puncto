@@ -1,7 +1,7 @@
 'use client';
 
-import { ReactNode, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { ReactNode, useMemo, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -10,6 +10,7 @@ import { LocaleSwitcher } from '@/components/admin/LocaleSwitcher';
 import { useTranslations } from 'next-intl';
 import { getIncludedFeaturesForPlanAndIndustry } from '@/lib/features/businessTypeFeatures';
 import type { FeatureId } from '@/lib/features/businessTypeFeatures';
+import { getBusinessRole } from '@/lib/permissions';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -48,9 +49,18 @@ const adminNavItems: { href: string; key: string; icon: string; feature: Feature
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { business } = useBusiness();
   const { user, logout } = useAuth();
   const t = useTranslations('nav');
+
+  const role = user && business ? getBusinessRole(user, business.id) : null;
+
+  useEffect(() => {
+    if (role === 'professional') {
+      router.replace('/tenant/professional');
+    }
+  }, [role, router]);
 
   const visibleNavItems = useMemo(() => {
     const tier = business?.subscription?.tier || 'free';

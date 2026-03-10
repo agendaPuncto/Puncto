@@ -1,6 +1,8 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { sendZeptoEmail } from '../lib/zeptomail';
+import { bookingConfirmationEmail } from '../templates/email';
 
 const db = getFirestore();
 
@@ -61,9 +63,18 @@ export const onBookingCreate = onDocumentCreated(
       }
 
       if (channels.includes('email') && booking.customerData?.email) {
-        // Send email confirmation
-        // Implementation would call email API here
-        logger.info(`[onBookingCreate] Would send email to ${booking.customerData.email}`);
+        const template = bookingConfirmationEmail(confirmationData);
+        const result = await sendZeptoEmail({
+          to: booking.customerData.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+        });
+        if (result.success) {
+          logger.info(`[onBookingCreate] Email sent to ${booking.customerData.email}`);
+        } else {
+          logger.warn(`[onBookingCreate] Email failed for ${booking.customerData.email}: ${result.error}`);
+        }
       }
 
       // Mark calendar event as ready to send

@@ -98,7 +98,11 @@ export default function AdminBookingsPage() {
       </div>
 
       {view === 'calendar' ? (
-        <BookingCalendar bookings={filteredBookings} onStatusChange={handleStatusChange} />
+        <BookingCalendar
+          bookings={filteredBookings}
+          workingHours={business?.settings?.workingHours}
+          onStatusChange={handleStatusChange}
+        />
       ) : (
         <div className="rounded-lg border border-neutral-200 bg-white">
           <div className="overflow-x-auto">

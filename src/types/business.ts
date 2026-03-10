@@ -194,6 +194,8 @@ export interface Professional {
   id: string;
   businessId: string;
   userId?: string;
+  /** True when this professional is the business owner; cannot be deleted, only edited */
+  isOwner?: boolean;
   name: string;
   email?: string;
   phone?: string;

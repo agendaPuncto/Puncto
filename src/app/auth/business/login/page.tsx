@@ -36,7 +36,7 @@ export default function BusinessLoginPage() {
   useEffect(() => {
     if (!user || loading) return;
 
-    const customClaims = (user as { customClaims?: { userType?: string } }).customClaims;
+    const customClaims = (user as { customClaims?: { userType?: string; businessRoles?: Record<string, string>; primaryBusinessId?: string; professionalId?: string } }).customClaims;
     if (customClaims?.userType !== 'business_user') return;
 
     const businessId =
@@ -44,8 +44,21 @@ export default function BusinessLoginPage() {
       (user as { primaryBusinessId?: string; businessId?: string }).primaryBusinessId ||
       (user as { primaryBusinessId?: string; businessId?: string }).businessId;
 
-    if (businessId && (returnUrl.startsWith('/tenant') || returnUrl.includes('subdomain='))) {
-      redirectToTenant(returnUrl, businessId);
+    if (!businessId) {
+      router.push(returnUrl);
+      return;
+    }
+
+    // Professionals go to professional dashboard by default
+    const role = customClaims?.businessRoles?.[businessId];
+    const isProfessional = role === 'professional';
+    const targetUrl =
+      isProfessional && (returnUrl.startsWith('/tenant/admin') || returnUrl === '/tenant/admin/dashboard')
+        ? '/tenant/professional'
+        : returnUrl;
+
+    if ((returnUrl.startsWith('/tenant') || returnUrl.includes('subdomain=')) && targetUrl.startsWith('/tenant')) {
+      redirectToTenant(targetUrl, businessId);
       return;
     }
 

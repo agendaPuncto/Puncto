@@ -189,6 +189,26 @@ export async function POST(request: NextRequest) {
 
     await businessRef.set(businessData);
 
+    // Create owner as Professional so they appear in professional dashboard and agenda
+    const userRecord = await auth.getUser(userId);
+    const prosRef = businessRef.collection('professionals');
+    const ownerProfessionalData = {
+      businessId,
+      userId,
+      name: userRecord.displayName || displayName || userRecord.email?.split('@')[0] || 'Proprietário',
+      email: userRecord.email || email,
+      phone,
+      specialties: [],
+      locationIds: [],
+      active: true,
+      canBookOnline: true,
+      isOwner: true,
+      workingHours: businessData.settings.workingHours,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await prosRef.add(ownerProfessionalData);
+
     // Create Stripe Checkout Session
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const checkoutSession = await createSubscriptionCheckout({
@@ -209,7 +229,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Get existing custom claims (if any)
-    const userRecord = await auth.getUser(userId);
     const existingClaims = userRecord.customClaims || {};
 
     // Set custom claims for the user as business_user with owner role
