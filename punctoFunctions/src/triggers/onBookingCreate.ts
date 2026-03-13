@@ -3,6 +3,7 @@ import { logger } from 'firebase-functions';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { sendZeptoEmail } from '../lib/zeptomail';
 import { bookingConfirmationEmail } from '../templates/email';
+import { sendWhatsApp } from '../lib/whatsapp';
 
 const db = getFirestore();
 
@@ -57,9 +58,28 @@ export const onBookingCreate = onDocumentCreated(
 
       // Send via configured channels
       if (channels.includes('whatsapp') && booking.customerData?.phone) {
-        // Send WhatsApp confirmation
-        // Implementation would call WhatsApp API here
-        logger.info(`[onBookingCreate] Would send WhatsApp to ${booking.customerData.phone}`);
+        try {
+          const wResult = await sendWhatsApp({
+            businessId,
+            to: booking.customerData.phone,
+            template: 'booking_confirmation',
+            templateParams: [
+              customerName || 'Cliente',
+              confirmationData.serviceName,
+              confirmationData.professionalName || '-',
+              confirmationData.date,
+              confirmationData.time,
+              confirmationData.businessName || 'Estabelecimento',
+            ],
+          });
+          if (wResult.success) {
+            logger.info(`[onBookingCreate] WhatsApp sent to ${booking.customerData.phone}`);
+          } else {
+            logger.warn(`[onBookingCreate] WhatsApp failed for ${booking.customerData.phone}: ${wResult.error}`);
+          }
+        } catch (wErr: unknown) {
+          logger.warn(`[onBookingCreate] WhatsApp error:`, wErr);
+        }
       }
 
       if (channels.includes('email') && booking.customerData?.email) {

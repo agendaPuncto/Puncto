@@ -1,185 +1,185 @@
-# Puncto - Quick Start Guide
+# Puncto - Guia de Início Rápido
 
-## 🚀 Getting Started with the New Authentication System
+## 🚀 Começando com o Novo Sistema de Autenticação
 
-This guide will help you quickly test all three authentication flows in development.
+Este guia ajudará você a testar rapidamente os três fluxos de autenticação em desenvolvimento.
 
 ---
 
-## Step 1: Create Your Platform Admin Account
+## Passo 1: Criar sua Conta de Administrador da Plataforma
 
-Run this command to create your admin account:
+Execute este comando para criar sua conta de admin:
 
 ```bash
 npm run create-admin
 ```
 
-**Fill in the prompts:**
+**Preencha os prompts:**
 ```
 Email: admin@puncto.com.br
-Name: Your Name
-Password: YourSecurePassword123
-Level: 1 (super_admin)
+Nome: Seu Nome
+Senha: SuaSenhaSegura123
+Nível: 1 (super_admin)
 ```
 
-✅ **You now have platform admin access!**
+✅ **Você agora tem acesso de administrador da plataforma!**
 
 ---
 
-## Step 2: Access Platform Admin Dashboard
+## Passo 2: Acessar o Painel Admin da Plataforma
 
-**Development URL:**
+**URL de desenvolvimento:**
 ```
 http://localhost:3000?subdomain=admin
 ```
 
-This will automatically redirect you to the platform admin login page at:
+Isso redirecionará automaticamente para a página de login admin da plataforma em:
 ```
 http://localhost:3000/auth/platform/login
 ```
 
-**Login with:**
+**Faça login com:**
 - Email: admin@puncto.com.br
-- Password: YourSecurePassword123
+- Senha: SuaSenhaSegura123
 
-✅ **You're now in the platform admin dashboard!**
+✅ **Você está agora no painel admin da plataforma!**
 
-**What you can do:**
-- View all businesses
-- Manage all users
-- View platform analytics
-- Manage subscriptions
+**O que você pode fazer:**
+- Visualizar todos os negócios
+- Gerenciar todos os usuários
+- Ver análises da plataforma
+- Gerenciar assinaturas
 
 ---
 
-## Step 3: Test Business Owner Flow (Optional)
+## Passo 3: Testar o Fluxo de Proprietário de Negócio (Opcional)
 
-### Create a Business Owner Account
+### Criar uma Conta de Proprietário
 
-1. **Visit business signup:**
+1. **Acesse o cadastro de negócio:**
    ```
    http://localhost:3000/auth/business/signup
    ```
 
-2. **Fill in account details:**
-   - Name: Test Business Owner
+2. **Preencha os dados da conta:**
+   - Nome: Proprietário de Teste
    - Email: owner@test.com
-   - Password: TestOwner123
-   - Accept terms
+   - Senha: TestOwner123
+   - Aceite os termos
 
-3. **Complete business onboarding:**
-   - Business Name: My Test Salon
-   - Legal Name: Test Salon LTDA
+3. **Complete o onboarding do negócio:**
+   - Nome do Negócio: Meu Salão de Teste
+   - Razão Social: Salão de Teste LTDA
    - CPF/CNPJ: 12345678901
-   - Industry: Salão de Beleza
+   - Segmento: Salão de Beleza
    - Email: contact@testsalon.com
-   - Phone: (11) 98765-4321
+   - Telefone: (11) 98765-4321
 
-4. **Select a plan:**
-   - Choose any plan (Starter, Growth, Pro)
+4. **Selecione um plano:**
+   - Escolha qualquer plano (Starter, Growth, Pro)
 
-5. **Complete payment:**
-   - Use Stripe test card: `4242 4242 4242 4242`
-   - Any future date
-   - Any CVC
+5. **Complete o pagamento:**
+   - Use o cartão de teste Stripe: `4242 4242 4242 4242`
+   - Qualquer data futura
+   - Qualquer CVC
 
-6. **Access business admin:**
+6. **Acesse o admin do negócio:**
    ```
    http://localhost:3000?subdomain=my-test-salon/admin
    ```
 
-✅ **Business owner account created!**
+✅ **Conta de proprietário criada!**
 
 ---
 
-## Step 4: Test Customer Flow (Optional)
+## Passo 4: Testar o Fluxo de Cliente (Opcional)
 
-### Create a Customer Account
+### Criar uma Conta de Cliente
 
-1. **Visit customer signup:**
+1. **Acesse o cadastro de cliente:**
    ```
    http://localhost:3000/auth/customer/signup
    ```
 
-2. **Fill in details:**
-   - Name: Test Customer
+2. **Preencha os dados:**
+   - Nome: Cliente de Teste
    - Email: customer@test.com
-   - Password: TestCustomer123
-   - Accept terms
+   - Senha: TestCustomer123
+   - Aceite os termos
 
-3. **Access customer area:**
-   - Book services at any business
-   - View bookings at `/my-bookings`
+3. **Acesse a área do cliente:**
+   - Faça agendamentos em qualquer negócio
+   - Visualize agendamentos em `/my-bookings`
 
-✅ **Customer account created!**
+✅ **Conta de cliente criada!**
 
 ---
 
-## 🔐 Authentication URLs Reference
+## 🔐 Referência de URLs de Autenticação
 
-### Platform Admin (You)
+### Admin da Plataforma (Você)
 - **Login:** `/auth/platform/login`
-- **Access:** `http://localhost:3000?subdomain=admin`
-- **Dashboard:** `/platform/dashboard`
+- **Acesso:** `http://localhost:3000?subdomain=admin`
+- **Painel:** `/platform/dashboard`
 
-### Business Owners
-- **Signup:** `/auth/business/signup`
+### Proprietários de Negócios
+- **Cadastro:** `/auth/business/signup`
 - **Login:** `/auth/business/login`
-- **Dashboard:** `http://localhost:3000?subdomain={slug}/admin`
+- **Painel:** `http://localhost:3000?subdomain={slug}/admin`
 
-### Customers
-- **Signup:** `/auth/customer/signup`
+### Clientes
+- **Cadastro:** `/auth/customer/signup`
 - **Login:** `/auth/customer/login`
-- **Bookings:** `/my-bookings`
+- **Agendamentos:** `/my-bookings`
 
 ---
 
-## ✅ Testing Checklist
+## ✅ Lista de Verificação para Testes
 
-Use this checklist to verify everything works:
+Use esta lista para verificar se tudo funciona:
 
-- [ ] Created platform admin via `npm run create-admin`
-- [ ] Logged in to platform admin dashboard
-- [ ] Viewed businesses list
-- [ ] Created test business owner account
-- [ ] Completed business onboarding
-- [ ] Accessed business admin dashboard
-- [ ] Created test customer account
-- [ ] Accessed customer booking page
-
----
-
-## 🚨 Common Issues
-
-### Can't Access Platform Admin
-- **Problem:** Getting "Unauthorized" error
-- **Solution:** Make sure you created the admin via `npm run create-admin` (not regular signup)
-
-### Business Owner Stuck on Payment
-- **Problem:** Business not activating after payment
-- **Solution:** Check Stripe webhook is configured correctly for local development
-
-### Wrong Login Page
-- **Problem:** Redirected to wrong login page
-- **Solution:** Use the correct login URL for your user type (see URLs above)
+- [ ] Criou admin da plataforma via `npm run create-admin`
+- [ ] Fez login no painel admin da plataforma
+- [ ] Visualizou a lista de negócios
+- [ ] Criou conta de proprietário de teste
+- [ ] Completou o onboarding do negócio
+- [ ] Acessou o painel admin do negócio
+- [ ] Criou conta de cliente de teste
+- [ ] Acessou a página de agendamento do cliente
 
 ---
 
-## 📚 Next Steps
+## 🚨 Problemas Comuns
 
-- Read the full [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md) for detailed information
-- Check [README.md](README.md) for overall platform documentation
-- Explore the platform admin features
-- Set up additional businesses for testing
+### Não Consegue Acessar o Admin da Plataforma
+- **Problema:** Erro "Não Autorizado"
+- **Solução:** Certifique-se de ter criado o admin via `npm run create-admin` (não cadastro normal)
+
+### Proprietário Travado no Pagamento
+- **Problema:** Negócio não ativa após o pagamento
+- **Solução:** Verifique se o webhook do Stripe está configurado corretamente para desenvolvimento local
+
+### Página de Login Errada
+- **Problema:** Redirecionado para a página de login errada
+- **Solução:** Use a URL de login correta para seu tipo de usuário (veja URLs acima)
 
 ---
 
-## 🎉 You're Ready!
+## 📚 Próximos Passos
 
-You now have:
-✅ Platform admin access for managing the entire platform
-✅ Separate authentication flows for each user type
-✅ Secure role-based access control
-✅ Self-service business onboarding
+- Leia o [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md) completo para informações detalhadas
+- Consulte o [README.md](README.md) para documentação geral da plataforma
+- Explore os recursos do painel admin da plataforma
+- Configure negócios adicionais para testes
 
-Happy building! 🚀
+---
+
+## 🎉 Você Está Pronto!
+
+Você agora tem:
+✅ Acesso de admin da plataforma para gerenciar toda a plataforma
+✅ Fluxos de autenticação separados para cada tipo de usuário
+✅ Controle de acesso seguro baseado em papéis
+✅ Onboarding de negócios por autoatendimento
+
+Bom desenvolvimento! 🚀

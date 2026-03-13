@@ -111,6 +111,10 @@
     "connectTitle": "Conecta tu WhatsApp",
     "connected": "WhatsApp conectado",
     "connectDesc": "Conecta el número de WhatsApp de tu negocio para que los mensajes automáticos se envíen desde tu número a tus clientes.",
+    "connectFacebookReason": "WhatsApp es propiedad de Meta (Facebook). Para conectar tu número de forma segura, Meta requiere un inicio de sesión único para verificar tu negocio. No almacenamos datos de Facebook.",
+    "connectNoFacebook": "¿No tienes cuenta de Facebook?",
+    "connectNoFacebookSuffix": "podemos conectar tu número manualmente.",
+    "contactSupport": "Contactar soporte",
     "connectButton": "Conectar WhatsApp",
     "connecting": "Conectando...",
     "connectNotConfigured": "Embedded Signup no está configurado. Contacta con soporte para habilitar WhatsApp por negocio."

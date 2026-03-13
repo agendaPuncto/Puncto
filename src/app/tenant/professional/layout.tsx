@@ -12,7 +12,7 @@ import { getBusinessRole } from '@/lib/permissions';
 function ProfessionalLayoutInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { business } = useBusiness();
   const { professional, isLoading } = useProfessional();
 
@@ -73,15 +73,22 @@ function ProfessionalLayoutInner({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="flex-shrink-0 p-4 border-t border-neutral-200">
+        <div className="flex-shrink-0 p-4 border-t border-neutral-200 space-y-2">
           {!isProfessional && (
             <Link
               href="/tenant/admin/dashboard"
-              className="text-sm text-neutral-600 hover:text-neutral-900"
+              className="block text-sm text-neutral-600 hover:text-neutral-900"
             >
               ← Voltar ao painel admin
             </Link>
           )}
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="text-sm text-neutral-600 hover:text-neutral-900"
+          >
+            Sair
+          </button>
         </div>
       </aside>
       <main className="ml-56 min-h-screen p-8">{children}</main>
@@ -93,7 +100,7 @@ export default function ProfessionalLayout({ children }: { children: ReactNode }
   return (
     <ProtectedRoute
       allowedRoles={['owner', 'manager', 'professional']}
-      redirectTo="/auth/business/login"
+      redirectTo="/auth/login"
     >
       <ProfessionalProvider>
         <ProfessionalLayoutInner>{children}</ProfessionalLayoutInner>

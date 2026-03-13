@@ -1,27 +1,27 @@
-# WhatsApp Webhook Setup with ngrok
+# Configuração do Webhook do WhatsApp com ngrok
 
-This guide explains how to receive incoming WhatsApp messages on your local development environment using ngrok. With this setup, messages sent to your business number will appear in the platform admin dashboard, and you can reply directly.
-
----
-
-## Prerequisites
-
-- WhatsApp Business API configured (phone number, access token in `.env.local`)
-- Platform admin account
-- Your Next.js dev server running on port 3000
+Este guia explica como receber mensagens recebidas do WhatsApp no seu ambiente de desenvolvimento local usando ngrok. Com essa configuração, as mensagens enviadas ao número do seu negócio aparecerão no painel admin da plataforma e você poderá responder diretamente.
 
 ---
 
-## Step 1: Install ngrok
+## Pré-requisitos
 
-### Option A: Official binary (recommended for Windows)
+- API do WhatsApp Business configurada (número de telefone, token de acesso em `.env.local`)
+- Conta de admin da plataforma
+- Servidor de desenvolvimento Next.js rodando na porta 3000
 
-1. Go to [ngrok.com/download](https://ngrok.com/download)
-2. Download **Windows (64-bit)**
-3. Unzip and place `ngrok.exe` in a folder (e.g. `C:\ngrok\`)
-4. (Optional) Add the folder to your PATH
+---
 
-### Option B: npm (macOS/Linux)
+## Passo 1: Instalar o ngrok
+
+### Opção A: Binário oficial (recomendado para Windows)
+
+1. Acesse [ngrok.com/download](https://ngrok.com/download)
+2. Baixe **Windows (64 bits)**
+3. Descompacte e coloque o `ngrok.exe` em uma pasta (ex: `C:\ngrok\`)
+4. (Opcional) Adicione a pasta ao PATH
+
+### Opção B: npm (macOS/Linux)
 
 ```bash
 npm install -g ngrok
@@ -29,39 +29,39 @@ npm install -g ngrok
 
 ---
 
-## Step 2: Configure ngrok (first time only)
+## Passo 2: Configurar o ngrok (apenas na primeira vez)
 
-1. Sign up at [ngrok.com](https://ngrok.com)
-2. Copy your authtoken from [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
-3. Run:
+1. Cadastre-se em [ngrok.com](https://ngrok.com)
+2. Copie seu authtoken em [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
+3. Execute:
 
 ```bash
-ngrok config add-authtoken YOUR_AUTHTOKEN_HERE
+ngrok config add-authtoken SEU_AUTHTOKEN_AQUI
 ```
 
 ---
 
-## Step 3: Start your dev server
+## Passo 3: Iniciar o servidor de desenvolvimento
 
-In one terminal, start the Next.js app:
+Em um terminal, inicie o app Next.js:
 
 ```bash
 npm run dev
 ```
 
-Keep this running. The app must be available on `http://localhost:3000`.
+Mantenha rodando. O app deve estar disponível em `http://localhost:3000`.
 
 ---
 
-## Step 4: Start ngrok
+## Passo 4: Iniciar o ngrok
 
-In a **second terminal**, run:
+Em um **segundo terminal**, execute:
 
 ```bash
 ngrok http 3000
 ```
 
-You should see output like:
+Você deve ver algo como:
 
 ```
 Session Status                online
@@ -69,56 +69,56 @@ Forwarding                    https://xxxx-xxxx.ngrok-free.app -> http://localho
 Web Interface                 http://127.0.0.1:4040
 ```
 
-**Important:** Copy the `https://xxxx-xxxx.ngrok-free.app` URL. This is your public URL for the webhook. Keep this terminal open—ngrok must stay running to receive messages.
+**Importante:** Copie a URL `https://xxxx-xxxx.ngrok-free.app`. Esta é sua URL pública para o webhook. Mantenha este terminal aberto—o ngrok precisa continuar rodando para receber mensagens.
 
 ---
 
-## Step 5: Configure Meta webhook
+## Passo 5: Configurar o webhook na Meta
 
-1. Go to [developers.facebook.com](https://developers.facebook.com) → Your App → **WhatsApp** → **Configuration**
-2. In the **Webhook** section, click **Edit**
-3. Set:
-   - **Callback URL:** `https://YOUR-NGROK-URL/api/whatsapp/webhook`  
-     Example: `https://a08b-2804-14c-878d-8496-c425-1a10-c6f8-badc.ngrok-free.app/api/whatsapp/webhook`
-   - **Verify token:** Same value as `WHATSAPP_VERIFY_TOKEN` in your `.env.local`
-4. Click **Verify and Save**
-5. Ensure **messages** is subscribed under Webhook fields
+1. Acesse [developers.facebook.com](https://developers.facebook.com) → Seu App → **WhatsApp** → **Configuração**
+2. Na seção **Webhook**, clique em **Editar**
+3. Defina:
+   - **URL de retorno:** `https://SUA-URL-NGROK/api/whatsapp/webhook`  
+     Exemplo: `https://a08b-2804-14c-878d-8496-c425-1a10-c6f8-badc.ngrok-free.app/api/whatsapp/webhook`
+   - **Token de verificação:** O mesmo valor de `WHATSAPP_VERIFY_TOKEN` no seu `.env.local`
+4. Clique em **Verificar e Salvar**
+5. Certifique-se de que **messages** está inscrito nos campos do Webhook
 
 ---
 
-## Step 6: View and reply to messages
+## Passo 6: Visualizar e responder mensagens
 
-1. Open the platform admin dashboard:  
+1. Abra o painel admin da plataforma:  
    `http://localhost:3000/platform/whatsapp`  
-   (Log in as platform admin if needed.)
+   (Faça login como admin da plataforma se necessário.)
 
-2. Have someone send a message to your business number from their WhatsApp.
+2. Peça para alguém enviar uma mensagem para o número do seu negócio pelo WhatsApp.
 
-3. In the dashboard:
-   - Click **Refresh** in the contacts list
-   - The conversation should appear
-   - Select it to see the message thread
+3. No painel:
+   - Clique em **Atualizar** na lista de contatos
+   - A conversa deve aparecer
+   - Selecione para ver o histórico de mensagens
 
-4. To reply: type your message and click **Send**.  
-   (The recipient must have messaged you within the last 24 hours for free-form replies to work.)
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Webhook verification fails | Ensure `WHATSAPP_VERIFY_TOKEN` in `.env.local` matches the value in Meta |
-| No messages appearing | Click **Refresh**; ensure ngrok and the dev server are running |
-| ngrok URL changes | Each ngrok restart gives a new URL—update the webhook in Meta |
-| "Not on WhatsApp yet" | Wait 24–48 hours after registering; check number status in Meta |
-| Can't send (template error) | Recipient must message you first; free-form text works within 24h of their last message |
+4. Para responder: digite sua mensagem e clique em **Enviar**.  
+   (O destinatário precisa ter te enviado mensagem nas últimas 24 horas para respostas livres funcionarem.)
 
 ---
 
-## Quick reference
+## Solução de Problemas
 
-**Start development session:**
+| Problema | Solução |
+|----------|---------|
+| Verificação do webhook falha | Certifique-se de que `WHATSAPP_VERIFY_TOKEN` no `.env.local` corresponde ao valor na Meta |
+| Mensagens não aparecem | Clique em **Atualizar**; confirme que ngrok e o servidor de desenvolvimento estão rodando |
+| URL do ngrok muda | Cada reinício do ngrok gera uma nova URL—atualize o webhook na Meta |
+| "Ainda não está no WhatsApp" | Aguarde 24–48 horas após o cadastro; verifique o status do número na Meta |
+| Não consegue enviar (erro de template) | O destinatário precisa te enviar mensagem primeiro; texto livre funciona em até 24h da última mensagem dele |
+
+---
+
+## Referência Rápida
+
+**Iniciar sessão de desenvolvimento:**
 ```bash
 # Terminal 1
 npm run dev
@@ -127,12 +127,12 @@ npm run dev
 ngrok http 3000
 ```
 
-**Webhook URL format:**
+**Formato da URL do webhook:**
 ```
-https://YOUR-NGROK-URL/api/whatsapp/webhook
+https://SUA-URL-NGROK/api/whatsapp/webhook
 ```
 
-**Platform WhatsApp dashboard:**
+**Painel WhatsApp da plataforma:**
 ```
 http://localhost:3000/platform/whatsapp
 ```

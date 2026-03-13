@@ -1,68 +1,68 @@
-# ✅ Vercel Deployment Checklist
+# ✅ Lista de Verificação para Deploy na Vercel
 
-## Pre-Deployment Steps
+## Etapas Pré-Deploy
 
-### 1. Code Preparation
-- [ ] All code committed to Git
-- [ ] Code pushed to GitHub/GitLab/Bitbucket
-- [ ] No sensitive data in code (check `.gitignore`)
-- [ ] Build passes locally (`npm run build`)
+### 1. Preparação do Código
+- [ ] Todo o código commitado no Git
+- [ ] Código enviado para GitHub/GitLab/Bitbucket
+- [ ] Sem dados sensíveis no código (verifique `.gitignore`)
+- [ ] Build passa localmente (`npm run build`)
 
-### 2. Vercel Account Setup
-- [ ] Create account at https://vercel.com
-- [ ] Connect GitHub account (recommended)
+### 2. Configuração da Conta Vercel
+- [ ] Criar conta em https://vercel.com
+- [ ] Conectar conta do GitHub (recomendado)
 
-### 3. Import Project
-- [ ] Click "Add New Project"
-- [ ] Import your repository
-- [ ] Verify framework is detected as "Next.js"
+### 3. Importar Projeto
+- [ ] Clicar em "Add New Project"
+- [ ] Importar seu repositório
+- [ ] Verificar se o framework foi detectado como "Next.js"
 
 ---
 
-## Environment Variables to Add in Vercel
+## Variáveis de Ambiente para Adicionar na Vercel
 
-### Required - Firebase (Client)
+### Obrigatórias - Firebase (Cliente)
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=seu-projeto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu-projeto-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
 ```
 
-### Required - Firebase Admin (Server)
-Choose ONE method:
+### Obrigatórias - Firebase Admin (Servidor)
+Escolha UM método:
 
-**Method 1: Individual Variables**
+**Método 1: Variáveis Individuais**
 ```
-FIREBASE_ADMIN_PROJECT_ID=your-project-id
-FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
+FIREBASE_ADMIN_PROJECT_ID=seu-projeto-id
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxxxx@seu-projeto.iam.gserviceaccount.com
 FIREBASE_ADMIN_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
 ```
 
-**Method 2: JSON String (Easier)**
+**Método 2: String JSON (Mais Fácil)**
 ```
 FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"...","private_key":"...","client_email":"..."}
 ```
 
-### Required - Stripe
+### Obrigatórias - Stripe
 ```
-STRIPE_SECRET_KEY=sk_live_... (or sk_test_...)
+STRIPE_SECRET_KEY=sk_live_... (ou sk_test_...)
 STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... (or pk_test_...)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... (ou pk_test_...)
 STRIPE_PRICE_ID_STARTER=price_...
 STRIPE_PRICE_ID_GROWTH=price_...
 STRIPE_PRICE_ID_PRO=price_...
 ```
 
-### Required - Application
+### Obrigatória - Aplicação
 ```
-NEXT_PUBLIC_APP_URL=https://your-project.vercel.app
+NEXT_PUBLIC_APP_URL=https://seu-projeto.vercel.app
 ```
-(Update after first deployment with actual domain)
+(Atualize após o primeiro deploy com o domínio real)
 
-### Optional - Analytics
+### Opcionais - Analytics
 ```
 NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 NEXT_PUBLIC_FB_PIXEL_ID=123456789
@@ -71,111 +71,111 @@ NEXT_PUBLIC_HOTJAR_ID=1234567
 NEXT_PUBLIC_CLARITY_ID=abc123xyz
 ```
 
-### Optional - Email (SendGrid)
+### Opcionais - E-mail (SendGrid)
 ```
 SENDGRID_API_KEY=SG.xxxxx
 SENDGRID_FROM_EMAIL=noreply@puncto.com.br
 SENDGRID_FROM_NAME=Puncto
 ```
 
-### Optional - Real-time (Centrifugo)
+### Opcionais - Tempo Real (Centrifugo)
 ```
-CENTRIFUGO_API_KEY=your_api_key
-CENTRIFUGO_TOKEN_HMAC_SECRET=your_secret
-NEXT_PUBLIC_CENTRIFUGO_URL=https://your-centrifugo-instance.com
+CENTRIFUGO_API_KEY=sua_api_key
+CENTRIFUGO_TOKEN_HMAC_SECRET=seu_secret
+NEXT_PUBLIC_CENTRIFUGO_URL=https://sua-instancia-centrifugo.com
 ```
 
-### Optional - Security
+### Opcional - Segurança
 ```
-PLATFORM_ADMIN_CREATE_SECRET=your_random_secret_string
+PLATFORM_ADMIN_CREATE_SECRET=sua_string_secreta_aleatoria
 ```
 
 ---
 
-## Deployment Steps
+## Etapas de Deploy
 
-1. **Add Environment Variables**
-   - Go to Project Settings → Environment Variables
-   - Add each variable above
-   - Select environments: Production, Preview, Development
+1. **Adicionar Variáveis de Ambiente**
+   - Vá em Project Settings → Environment Variables
+   - Adicione cada variável acima
+   - Selecione ambientes: Production, Preview, Development
 
-2. **Deploy**
-   - Click "Deploy"
-   - Wait for build (2-5 minutes)
-   - Check build logs for errors
+2. **Fazer Deploy**
+   - Clique em "Deploy"
+   - Aguarde o build (2-5 minutos)
+   - Verifique os logs de build por erros
 
-3. **Verify**
-   - Visit deployment URL
-   - Test homepage
-   - Test all marketing pages
-   - Check console for errors
+3. **Verificar**
+   - Acesse a URL do deploy
+   - Teste a página inicial
+   - Teste todas as páginas de marketing
+   - Verifique o console por erros
 
-4. **Configure Domain** (if needed)
+4. **Configurar Domínio** (se necessário)
    - Settings → Domains
-   - Add your domain
-   - Update DNS records
-   - Update `NEXT_PUBLIC_APP_URL`
+   - Adicione seu domínio
+   - Atualize os registros DNS
+   - Atualize `NEXT_PUBLIC_APP_URL`
 
-5. **Configure Stripe Webhook**
+5. **Configurar Webhook do Stripe**
    - Stripe Dashboard → Webhooks
-   - Add endpoint: `https://your-domain.com/api/subscriptions/webhook`
-   - Copy signing secret → Add to Vercel as `STRIPE_WEBHOOK_SECRET`
-   - Redeploy
+   - Adicione endpoint: `https://seu-dominio.com/api/subscriptions/webhook`
+   - Copie o signing secret → Adicione na Vercel como `STRIPE_WEBHOOK_SECRET`
+   - Faça redeploy
 
 ---
 
-## Quick Commands
+## Comandos Rápidos
 
 ```bash
-# Test build locally
+# Testar build localmente
 npm run build
 
-# Check for TypeScript errors
+# Verificar erros de TypeScript
 npm run lint
 
-# Push to deploy
+# Enviar para fazer deploy
 git add .
-git commit -m "Ready for deployment"
+git commit -m "Pronto para deploy"
 git push origin main
 ```
 
 ---
 
-## Troubleshooting
+## Solução de Problemas
 
-**Build fails:**
-- Check build logs in Vercel
-- Verify all required env vars are set
-- Test build locally first
+**Build falha:**
+- Verifique os logs de build na Vercel
+- Confirme que todas as variáveis de ambiente obrigatórias estão definidas
+- Teste o build localmente primeiro
 
-**Environment variables not working:**
-- Must start with `NEXT_PUBLIC_` for client-side
-- Redeploy after adding variables
-- Check for typos (case-sensitive)
+**Variáveis de ambiente não funcionam:**
+- Devem começar com `NEXT_PUBLIC_` para uso no cliente
+- Faça redeploy após adicionar variáveis
+- Verifique erros de digitação (sensível a maiúsculas/minúsculas)
 
-**Firebase errors:**
-- Verify Firebase config values
-- Check Firebase project is active
-- Ensure Admin credentials are valid
-
----
-
-## Brand Assets (Logo & Favicon)
-
-Place your brand files in the `public/` folder:
-
-| File | Location | Usage |
-|------|----------|-------|
-| Logo (SVG) | `public/logo.svg` | Header, marketing pages (logo should include the "Puncto" text) |
-| Logo white (SVG) | `public/logo-white.svg` | Footer (dark background) – white/light version of your logo |
-| Favicon | `public/favicon.ico` | Browser tab, bookmarks, PWA |
-
-**Note:** The logo component displays only the image (no additional text), so your SVG should include the "Puncto" branding/text. For the footer on dark backgrounds, add `logo-white.svg` (light-colored version). If missing, it will fallback to `logo.svg`.
+**Erros do Firebase:**
+- Verifique se os valores de configuração do Firebase estão corretos
+- Confirme se o projeto Firebase está ativo
+- Garanta que as credenciais do Admin são válidas
 
 ---
 
-## Support Resources
+## Recursos de Marca (Logo e Favicon)
 
-- Vercel Docs: https://vercel.com/docs
-- Next.js Deployment: https://nextjs.org/docs/deployment
-- Firebase Setup: https://firebase.google.com/docs/web/setup
+Coloque seus arquivos de marca na pasta `public/`:
+
+| Arquivo | Localização | Uso |
+|---------|-------------|-----|
+| Logo (SVG) | `public/logo.svg` | Cabeçalho, páginas de marketing (o logo deve incluir o texto "Puncto") |
+| Logo branco (SVG) | `public/logo-white.svg` | Rodapé (fundo escuro) – versão branca/clara do seu logo |
+| Favicon | `public/favicon.ico` | Aba do navegador, favoritos, PWA |
+
+**Nota:** O componente de logo exibe apenas a imagem (sem texto adicional), então seu SVG deve incluir a marca/texto "Puncto". Para o rodapé em fundos escuros, adicione `logo-white.svg` (versão clara). Se ausente, usa `logo.svg` como fallback.
+
+---
+
+## Recursos de Suporte
+
+- Documentação Vercel: https://vercel.com/docs
+- Deploy Next.js: https://nextjs.org/docs/deployment
+- Configuração Firebase: https://firebase.google.com/docs/web/setup

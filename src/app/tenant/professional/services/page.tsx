@@ -8,11 +8,10 @@ export default function ProfessionalServicesPage() {
   const { business } = useBusiness();
   const { professional } = useProfessional();
   const { data: allServices } = useServices(business?.id ?? '');
-  const myServiceIds = new Set(professional?.professionalIds ?? []);
   const services =
-    myServiceIds.size > 0
-      ? (allServices ?? []).filter((s) => myServiceIds.has(s.id))
-      : [];
+    (allServices ?? []).filter((s) =>
+      s.professionalIds?.includes(professional?.id ?? '')
+    );
 
   if (!professional) {
     return (

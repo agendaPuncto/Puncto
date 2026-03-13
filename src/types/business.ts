@@ -115,6 +115,8 @@ export interface CancellationPolicy {
   noRefundHours?: number; // Hours before service for no refund
 }
 
+export type ConfirmationChannel = 'email' | 'whatsapp';
+
 export interface Settings {
   timezone: string;
   locale: 'pt-BR' | 'en-US' | 'es-ES';
@@ -123,6 +125,8 @@ export interface Settings {
   cancellationPolicy: CancellationPolicy;
   workingHours: WorkingHours;
   whatsapp?: WhatsAppConfig;
+  /** Channels for sending booking confirmations (email, whatsapp) */
+  confirmationChannels?: ConfirmationChannel[];
 }
 
 export interface CustomField {

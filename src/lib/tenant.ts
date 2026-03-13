@@ -153,5 +153,5 @@ export function isTenantContext(): boolean {
  */
 export function isPlatformAdmin(): boolean {
   const slug = getBusinessSlug();
-  return slug === 'admin';
+  return slug === 'primazia';
 }

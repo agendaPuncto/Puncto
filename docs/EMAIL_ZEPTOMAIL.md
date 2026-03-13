@@ -1,42 +1,42 @@
-# ZeptoMail Email Integration
+# Integração de E-mail ZeptoMail
 
-Puncto uses **ZeptoMail** (by Zoho) as the default transactional email provider across the app and Firebase Functions.
+O Puncto usa **ZeptoMail** (da Zoho) como provedor padrão de e-mails transacionais em todo o app e nas Firebase Functions.
 
-## Configuration
+## Configuração
 
-### Environment Variables
+### Variáveis de Ambiente
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ZEPTOMAIL_API_KEY` | Yes | Send Mail Token from ZeptoMail Agents → SMTP/API → Send Mail Token |
-| `ZEPTOMAIL_FROM_EMAIL` | No | Sender email (default: `noreply@puncto.app`). Must be from a verified domain in ZeptoMail |
-| `ZEPTOMAIL_FROM_NAME` | No | Sender display name (default: `Puncto`) |
-| `EMAIL_PROVIDER` | No | Set to `zeptomail`, `resend`, or `mailgun` to override auto-detection |
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `ZEPTOMAIL_API_KEY` | Sim | Token Send Mail em ZeptoMail Agents → SMTP/API → Send Mail Token |
+| `ZEPTOMAIL_FROM_EMAIL` | Não | E-mail remetente (padrão: `noreply@puncto.app`). Deve ser de um domínio verificado no ZeptoMail |
+| `ZEPTOMAIL_FROM_NAME` | Não | Nome de exibição do remetente (padrão: `Puncto`) |
+| `EMAIL_PROVIDER` | Não | Defina como `zeptomail`, `resend` ou `mailgun` para sobrescrever a detecção automática |
 
-### Where to Set
+### Onde Configurar
 
-1. **Next.js / Vercel**: Add to Vercel project → Settings → Environment Variables
-2. **Firebase Functions**: Add via Firebase Console → Functions → Environment config, or `firebase functions:config:set zeptomail.api_key="..."` (requires mapping to `process.env` in code)
+1. **Next.js / Vercel**: Adicione em Vercel project → Settings → Environment Variables
+2. **Firebase Functions**: Adicione via Firebase Console → Functions → Environment config, ou `firebase functions:config:set zeptomail.api_key="..."` (requer mapeamento para `process.env` no código)
 
-For Firebase Functions, ensure `ZEPTOMAIL_API_KEY`, `ZEPTOMAIL_FROM_EMAIL`, and `ZEPTOMAIL_FROM_NAME` are available in the Functions environment (e.g. via Secret Manager or Functions config).
+Para Firebase Functions, garanta que `ZEPTOMAIL_API_KEY`, `ZEPTOMAIL_FROM_EMAIL` e `ZEPTOMAIL_FROM_NAME` estejam disponíveis no ambiente das Functions (ex: via Secret Manager ou config das Functions).
 
-## Where Emails Are Sent
+## Onde os E-mails São Enviados
 
-| Location | Purpose |
-|----------|---------|
-| `src/lib/messaging/email.ts` | Main email client used by API routes |
-| `src/app/api/campaigns/send/route.ts` | Marketing campaign emails |
-| `src/app/api/professionals/invite/route.ts` | Professional invite (password reset link) |
-| `punctoFunctions/triggers/onBookingCreate.ts` | Booking confirmation |
-| `punctoFunctions/scheduled/reminders.ts` | Booking reminders (48h, 24h, 3h) |
-| `punctoFunctions/scheduled/birthdayReminders.ts` | Birthday campaign emails |
-| `punctoFunctions/scheduled/inventoryAlerts.ts` | Low stock alerts |
-| `punctoFunctions/staff/inviteStaff.ts` | Staff invite emails |
+| Local | Propósito |
+|-------|-----------|
+| `src/lib/messaging/email.ts` | Cliente de e-mail principal usado pelas rotas de API |
+| `src/app/api/campaigns/send/route.ts` | E-mails de campanhas de marketing |
+| `src/app/api/professionals/invite/route.ts` | Convite de profissional (link de reset de senha) |
+| `punctoFunctions/triggers/onBookingCreate.ts` | Confirmação de agendamento |
+| `punctoFunctions/scheduled/reminders.ts` | Lembretes de agendamento (48h, 24h, 3h) |
+| `punctoFunctions/scheduled/birthdayReminders.ts` | E-mails de campanha de aniversário |
+| `punctoFunctions/scheduled/inventoryAlerts.ts` | Alertas de estoque baixo |
+| `punctoFunctions/staff/inviteStaff.ts` | E-mails de convite de equipe |
 
-## Switching Providers
+## Alternando Provedores
 
-Set `EMAIL_PROVIDER`:
+Defina `EMAIL_PROVIDER`:
 
-- `zeptomail` – ZeptoMail (default when `ZEPTOMAIL_API_KEY` is set)
+- `zeptomail` – ZeptoMail (padrão quando `ZEPTOMAIL_API_KEY` está definido)
 - `resend` – Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`)
 - `mailgun` – Mailgun (`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`)

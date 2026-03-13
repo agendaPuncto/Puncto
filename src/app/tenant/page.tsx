@@ -41,6 +41,17 @@ export default function PublicBusinessPage() {
       setLastName(parts.slice(1).join(' ') || '');
     }
   }, [user]);
+  useEffect(() => {
+    if (user?.email) setEmail(user.email);
+  }, [user?.email]);
+
+  function resetBookingFlow() {
+    setStep(1);
+    setSelectedService(null);
+    setSelectedPro(null);
+    setSelectedTime(null);
+    setCreatedId(null);
+  }
 
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -56,6 +67,7 @@ export default function PublicBusinessPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [step, setStep] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -170,7 +182,7 @@ export default function PublicBusinessPage() {
         durationMinutes: currentService.durationMinutes,
         endDateTime: Timestamp.fromDate(new Date(new Date(`${selectedDate}T${selectedTime}`).getTime() + (currentService.durationMinutes || 60) * 60000)),
         customerId: user?.id || null,
-        customerData: { firstName, lastName, phone, email: user?.email || '' },
+        customerData: { firstName, lastName, phone, email: email || user?.email || '' },
         status: 'pending',
         price: currentService.price,
         currency: currentService.currency,
@@ -551,6 +563,7 @@ export default function PublicBusinessPage() {
                     <div><label className="block text-xs font-medium text-stone-500 mb-1">Nome</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Seu nome" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div><label className="block text-xs font-medium text-stone-500 mb-1">Sobrenome</label><input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Sobrenome" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Telefone (WhatsApp)</label><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
+                    <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">E-mail (opcional — para confirmação)</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Observações (opcional)</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alergias, preferências..." rows={3} className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none resize-none" /></div>
                   </div>
                   <div className="flex justify-between mt-6 pt-4 border-t border-stone-100">
@@ -582,9 +595,10 @@ export default function PublicBusinessPage() {
                 <div className="bg-white rounded-2xl border border-stone-200/80 p-8 shadow-sm text-center">
                   <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-2xl mx-auto mb-4">✓</div>
                   <h3 className="text-xl font-semibold text-stone-900 mb-2">Agendamento criado!</h3>
-                  <p className="text-stone-600 text-sm mb-6">Enviamos a confirmação para seu WhatsApp/e‑mail. Código: <span className="font-mono text-stone-900">{createdId}</span></p>
+                  <p className="text-stone-600 text-sm mb-6">Guarde o código da reserva: <span className="font-mono text-stone-900 font-medium">{createdId}</span>. {email || user?.email ? 'Enviaremos a confirmação por e-mail.' : 'Informe seu e-mail na próxima vez para receber confirmação.'}</p>
                   <div className="flex flex-wrap justify-center gap-3">
-                    <AddToCalendar booking={{ id: createdId, businessId: business!.id, serviceId: currentService?.id || '', serviceName: currentService?.name || '', professionalId: currentPro?.id || '', professionalName: currentPro?.name || '', locationId: '', scheduledDate: selectedDate, scheduledTime: selectedTime || '', scheduledDateTime: new Date(`${selectedDate}T${selectedTime}`), durationMinutes: currentService?.durationMinutes || 60, endDateTime: new Date(`${selectedDate}T${selectedTime}`), customerData: { firstName, lastName, phone, email: user?.email }, status: 'pending', price: currentService?.price || 0, currency: 'BRL', reminders: {}, createdAt: new Date(), updatedAt: new Date() }} business={business!} />
+                    <AddToCalendar booking={{ id: createdId, businessId: business!.id, serviceId: currentService?.id || '', serviceName: currentService?.name || '', professionalId: currentPro?.id || '', professionalName: currentPro?.name || '', locationId: '', scheduledDate: selectedDate, scheduledTime: selectedTime || '', scheduledDateTime: new Date(`${selectedDate}T${selectedTime}`), durationMinutes: currentService?.durationMinutes || 60, endDateTime: new Date(`${selectedDate}T${selectedTime}`), customerData: { firstName, lastName, phone, email: email || user?.email }, status: 'pending', price: currentService?.price || 0, currency: 'BRL', reminders: {}, createdAt: new Date(), updatedAt: new Date() }} business={business!} />
+                    <button onClick={resetBookingFlow} className="px-5 py-2.5 text-sm font-medium bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-opacity">Fazer outro agendamento</button>
                     <a href="#" className="px-4 py-2.5 text-sm font-medium text-[var(--brand-secondary)] hover:underline">Ver meus agendamentos</a>
                   </div>
                 </div>

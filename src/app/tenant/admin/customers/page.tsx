@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
+import { Customer } from '@/types/booking';
+import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
   const { data: customers = [], isLoading } = useCustomers(business.id);
   const createCustomer = useCreateCustomer(business.id);
   const [showForm, setShowForm] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'recent' | 'spent' | 'bookings'>('name');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -17,6 +22,46 @@ export default function AdminCustomersPage() {
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
+
+  const filteredAndSorted = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    let list = customers;
+    if (q) {
+      list = customers.filter((c) => {
+        const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+        const phone = (c.phone || '').replace(/\D/g, '');
+        const email = (c.email || '').toLowerCase();
+        const searchDigits = q.replace(/\D/g, '');
+        return (
+          name.includes(q) ||
+          email.includes(q) ||
+          (searchDigits.length >= 4 && phone.includes(searchDigits))
+        );
+      });
+    }
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'name': {
+          const na = `${a.firstName} ${a.lastName}`.toLowerCase();
+          const nb = `${b.firstName} ${b.lastName}`.toLowerCase();
+          return na.localeCompare(nb);
+        }
+        case 'recent': {
+          const aDate = a.lastBookingAt || a.createdAt;
+          const bDate = b.lastBookingAt || b.createdAt;
+          const ta = aDate ? new Date(aDate as Date).getTime() : 0;
+          const tb = bDate ? new Date(bDate as Date).getTime() : 0;
+          return tb - ta;
+        }
+        case 'spent':
+          return (b.totalSpent || 0) - (a.totalSpent || 0);
+        case 'bookings':
+          return (b.totalBookings || 0) - (a.totalBookings || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [customers, search, sortBy]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +95,7 @@ export default function AdminCustomersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Clientes</h1>
           <p className="text-neutral-600 mt-2">Base de dados de clientes</p>
@@ -61,6 +106,32 @@ export default function AdminCustomersPage() {
         >
           Cadastrar cliente
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="text"
+          placeholder="Buscar por nome, telefone ou e-mail..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        >
+          <option value="name">Nome (A–Z)</option>
+          <option value="recent">Mais recentes primeiro</option>
+          <option value="spent">Maior gasto</option>
+          <option value="bookings">Mais agendamentos</option>
+        </select>
+        {search && (
+          <span className="text-sm text-neutral-500">
+            {filteredAndSorted.length} de {customers.length} clientes
+          </span>
+        )}
       </div>
 
       {showForm && (
@@ -158,8 +229,12 @@ export default function AdminCustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200">
-              {customers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-neutral-50">
+              {filteredAndSorted.map((customer) => (
+                <tr
+                  key={customer.id}
+                  onClick={() => setSelectedCustomer(customer)}
+                  className="cursor-pointer hover:bg-neutral-50 transition-colors"
+                >
                   <td className="px-6 py-4 text-sm font-medium">
                     {customer.firstName} {customer.lastName}
                   </td>
@@ -175,13 +250,23 @@ export default function AdminCustomersPage() {
               ))}
             </tbody>
           </table>
-          {customers.length === 0 && (
+          {filteredAndSorted.length === 0 && (
             <div className="p-8 text-center text-neutral-500">
-              Nenhum cliente cadastrado. Clique em &quot;Cadastrar cliente&quot; para adicionar.
+              {search
+                ? 'Nenhum cliente encontrado com os filtros aplicados.'
+                : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.'}
             </div>
           )}
         </div>
       </div>
+
+      {selectedCustomer && business && (
+        <CustomerDetailModal
+          customer={selectedCustomer}
+          businessId={business.id}
+          onClose={() => setSelectedCustomer(null)}
+        />
+      )}
     </div>
   );
 }

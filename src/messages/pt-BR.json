@@ -111,8 +111,15 @@
     "connectTitle": "Conecte seu WhatsApp",
     "connected": "WhatsApp conectado",
     "connectDesc": "Conecte o número do WhatsApp do seu negócio para que as mensagens automáticas sejam enviadas do seu número para seus clientes.",
+    "connectFacebookReason": "O WhatsApp pertence à Meta (Facebook). Para conectar seu número de forma segura, a Meta exige um login único para verificar seu negócio. Não armazenamos dados do Facebook.",
+    "connectNoFacebook": "Não tem conta no Facebook?",
+    "connectNoFacebookSuffix": "podemos conectar seu número manualmente.",
+    "contactSupport": "Entre em contato com o suporte",
     "connectButton": "Conectar WhatsApp",
     "connecting": "Conectando...",
-    "connectNotConfigured": "O Embedded Signup não está configurado. Entre em contato com o suporte para ativar o WhatsApp por negócio."
+    "connectNotConfigured": "O Embedded Signup não está configurado. Entre em contato com o suporte para ativar o WhatsApp por negócio.",
+    "bookingConfirmationsTitle": "Confirmações de agendamento",
+    "bookingConfirmationsDesc": "Ao criar um agendamento, envie confirmação automaticamente por:",
+    "sendViaWhatsApp": "Enviar por WhatsApp"
   }
 }

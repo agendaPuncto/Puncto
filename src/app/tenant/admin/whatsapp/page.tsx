@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import Script from 'next/script';
-import type { WhatsAppConfig } from '@/types/business';
+import Link from 'next/link';
+import type { WhatsAppConfig, ConfirmationChannel } from '@/types/business';
 
 declare global {
   interface Window {
@@ -39,6 +40,9 @@ export default function AdminWhatsAppPage() {
   const settings = business?.settings;
   const whatsapp = settings?.whatsapp || {};
 
+  const confirmationChannels = settings?.confirmationChannels ?? ['email'];
+  const sendConfirmationsViaWhatsApp = confirmationChannels.includes('whatsapp');
+
   const [formData, setFormData] = useState<Partial<WhatsAppConfig>>({
     number: whatsapp.number || business?.phone || '',
     presetMessage: whatsapp.presetMessage || '',
@@ -56,18 +60,25 @@ export default function AdminWhatsAppPage() {
   }, [business?.id, business?.phone]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { number: string; presetMessage?: string }) => {
-      // Only persist user-facing fields. API credentials stay in env vars (backend only).
+    mutationFn: async (data: {
+      number: string;
+      presetMessage?: string;
+      confirmationChannels?: ConfirmationChannel[];
+    }) => {
       const res = await fetch(`/api/settings?businessId=${business?.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           settings: {
+            ...settings,
             whatsapp: {
               ...whatsapp,
               number: data.number,
               presetMessage: data.presetMessage,
             },
+            ...(data.confirmationChannels !== undefined && {
+              confirmationChannels: data.confirmationChannels,
+            }),
           },
         }),
       });
@@ -84,6 +95,17 @@ export default function AdminWhatsAppPage() {
     saveMutation.mutate({
       number: formData.number || '',
       presetMessage: formData.presetMessage || undefined,
+    });
+  };
+
+  const handleToggleWhatsAppConfirmations = (checked: boolean) => {
+    const channels: ConfirmationChannel[] = checked
+      ? [...new Set([...(confirmationChannels || ['email']), 'whatsapp'])]
+      : (confirmationChannels || ['email']).filter((c) => c !== 'whatsapp');
+    saveMutation.mutate({
+      number: formData.number || '',
+      presetMessage: formData.presetMessage,
+      confirmationChannels: channels,
     });
   };
 
@@ -120,6 +142,8 @@ export default function AdminWhatsAppPage() {
     },
   });
 
+  const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+
   const handleConnectWhatsApp = useCallback(() => {
     if (!window.FB || !configId || !business?.id) return;
     window.FB.login(
@@ -140,24 +164,32 @@ export default function AdminWhatsAppPage() {
   return (
     <div>
       {appId && (
-        <Script
-          id="fb-sdk"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.fbAsyncInit = function() {
-                FB.init({ appId: '${appId}', cookie: true, xfbml: true });
-              };
-              (function(d, s, id) {
-                var js, fjs = d.getElementsByTagName(s)[0];
-                if (d.getElementById(id)) return;
-                js = d.createElement(s); js.id = id;
-                js.src = 'https://connect.facebook.net/en_US/sdk.js';
-                fjs.parentNode.insertBefore(js, fjs);
-              }(document, 'script', 'facebook-jssdk'));
-            `,
-          }}
-        />
+        <>
+          <div id="fb-root" />
+          <Script
+            id="fb-sdk"
+            strategy="lazyOnload"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.fbAsyncInit = function() {
+                  FB.init({
+                    appId: '${appId}',
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v21.0'
+                  });
+                };
+                (function(d, s, id) {
+                  var js, fjs = d.getElementsByTagName(s)[0];
+                  if (d.getElementById(id)) return;
+                  js = d.createElement(s); js.id = id;
+                  js.src = 'https://connect.facebook.net/en_US/sdk.js';
+                  fjs.parentNode.insertBefore(js, fjs);
+                }(document, 'script', 'facebook-jssdk'));
+              `,
+            }}
+          />
+        </>
       )}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-neutral-900">{t('title')}</h1>
@@ -175,12 +207,29 @@ export default function AdminWhatsAppPage() {
             </div>
           ) : appId && configId ? (
             <div>
+              {!isHttps && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-medium text-amber-800">
+                    O Facebook exige HTTPS para conectar. Use sua URL ngrok com <strong>https://</strong> (ex: https://xxx.ngrok-free.app) em vez de http://localhost.
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-neutral-600 mb-3">{t('connectDesc')}</p>
+              <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="text-sm text-blue-800">{t('connectFacebookReason')}</p>
+              </div>
+              <p className="text-sm text-neutral-600 mb-3">
+                {t('connectNoFacebook')}{' '}
+                <Link href="/contact" className="font-medium text-green-700 hover:text-green-800 underline">
+                  {t('contactSupport')}
+                </Link>
+                — {t('connectNoFacebookSuffix')}
+              </p>
               <button
                 type="button"
                 onClick={handleConnectWhatsApp}
-                disabled={connectMutation.isPending}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                disabled={connectMutation.isPending || !isHttps}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {connectMutation.isPending ? t('connecting') : t('connectButton')}
               </button>
@@ -227,6 +276,24 @@ export default function AdminWhatsAppPage() {
             />
             <p className="mt-1 text-xs text-neutral-500">{t('numberHint')}</p>
           </div>
+
+          {/* Booking confirmations via WhatsApp - automated tier only */}
+          {isAutomated && whatsappConnected && (
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+              <h3 className="font-medium text-neutral-900 mb-2">{t('bookingConfirmationsTitle')}</h3>
+              <p className="text-sm text-neutral-600 mb-3">{t('bookingConfirmationsDesc')}</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendConfirmationsViaWhatsApp}
+                  onChange={(e) => handleToggleWhatsAppConfirmations(e.target.checked)}
+                  disabled={saveMutation.isPending}
+                  className="rounded border-neutral-300"
+                />
+                <span className="text-sm">{t('sendViaWhatsApp')}</span>
+              </label>
+            </div>
+          )}
 
           {/* Preset message - for manual mode: pre-filled when user opens WhatsApp */}
           <div>

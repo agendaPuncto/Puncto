@@ -55,7 +55,7 @@ export default function Header() {
 
           <div className="hidden lg:flex items-center gap-4">
             <Link
-              href="/auth/login"
+              href="/auth/signup"
               className="text-slate-700 hover:text-primary-600 font-medium transition-colors"
             >
               Entrar

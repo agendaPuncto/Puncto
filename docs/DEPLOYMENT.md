@@ -1,296 +1,296 @@
-# 🚀 Vercel Deployment Guide for Puncto
+# 🚀 Guia de Deploy na Vercel para o Puncto
 
-This guide will walk you through deploying your Puncto marketing website to Vercel.
+Este guia orienta o deploy do site de marketing do Puncto na Vercel.
 
-## Prerequisites
+## Pré-requisitos
 
-- ✅ GitHub account (or GitLab/Bitbucket)
-- ✅ Vercel account (free tier works)
-- ✅ Your code pushed to a Git repository
-- ✅ Environment variables ready
+- ✅ Conta no GitHub (ou GitLab/Bitbucket)
+- ✅ Conta na Vercel (tier gratuito funciona)
+- ✅ Seu código enviado para um repositório Git
+- ✅ Variáveis de ambiente prontas
 
 ---
 
-## Step 1: Prepare Your Repository
+## Passo 1: Preparar seu Repositório
 
-### 1.1 Push Your Code to GitHub
+### 1.1 Enviar seu Código para o GitHub
 
-1. **Initialize Git** (if not already done):
+1. **Inicialize o Git** (se ainda não fez):
    ```bash
    cd C:\Users\begam\Desktop\Puncto
    git init
    git add .
-   git commit -m "Initial commit - Marketing website ready for deployment"
+   git commit -m "Commit inicial - Site de marketing pronto para deploy"
    ```
 
-2. **Create a GitHub Repository**:
-   - Go to https://github.com/new
-   - Create a new repository (e.g., `puncto-marketing`)
-   - **DO NOT** initialize with README, .gitignore, or license
+2. **Crie um Repositório no GitHub**:
+   - Acesse https://github.com/new
+   - Crie um novo repositório (ex: `puncto-marketing`)
+   - **NÃO** inicialize com README, .gitignore ou licença
 
-3. **Push Your Code**:
+3. **Envie seu Código**:
    ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/puncto-marketing.git
+   git remote add origin https://github.com/SEU_USUARIO/puncto-marketing.git
    git branch -M main
    git push -u origin main
    ```
 
 ---
 
-## Step 2: Create Vercel Account & Project
+## Passo 2: Criar Conta e Projeto na Vercel
 
-### 2.1 Sign Up / Login to Vercel
+### 2.1 Cadastro / Login na Vercel
 
-1. Go to https://vercel.com
-2. Click **"Sign Up"** or **"Log In"**
-3. Choose **"Continue with GitHub"** (recommended for easy integration)
+1. Acesse https://vercel.com
+2. Clique em **"Sign Up"** ou **"Log In"**
+3. Escolha **"Continue with GitHub"** (recomendado para integração fácil)
 
-### 2.2 Import Your Project
+### 2.2 Importar seu Projeto
 
-1. After logging in, click **"Add New..."** → **"Project"**
-2. Click **"Import Git Repository"**
-3. Find your `puncto-marketing` repository and click **"Import"**
+1. Após o login, clique em **"Add New..."** → **"Project"**
+2. Clique em **"Import Git Repository"**
+3. Encontre seu repositório `puncto-marketing` e clique em **"Import"**
 
 ---
 
-## Step 3: Configure Project Settings
+## Passo 3: Configurar as Configurações do Projeto
 
-### 3.1 Project Configuration
+### 3.1 Configuração do Projeto
 
-Vercel should auto-detect Next.js. Verify these settings:
+A Vercel deve detectar o Next.js automaticamente. Verifique estas configurações:
 
 - **Framework Preset:** Next.js
-- **Root Directory:** `./` (leave as default)
-- **Build Command:** `npm run build` (auto-detected)
-- **Output Directory:** `.next` (auto-detected)
-- **Install Command:** `npm install` (auto-detected)
+- **Root Directory:** `./` (deixe padrão)
+- **Build Command:** `npm run build` (detectado automaticamente)
+- **Output Directory:** `.next` (detectado automaticamente)
+- **Install Command:** `npm install` (detectado automaticamente)
 
-### 3.2 Environment Variables
+### 3.2 Variáveis de Ambiente
 
-Click **"Environment Variables"** and add the following:
+Clique em **"Environment Variables"** e adicione:
 
-#### Firebase Configuration (Required)
+#### Configuração Firebase (Obrigatório)
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-```
-
-#### Firebase Admin (Required for Server-Side)
-```
-FIREBASE_ADMIN_PROJECT_ID=your_project_id
-FIREBASE_ADMIN_CLIENT_EMAIL=your_service_account_email
-FIREBASE_ADMIN_PRIVATE_KEY=your_private_key
+NEXT_PUBLIC_FIREBASE_API_KEY=sua_api_key_aqui
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu_projeto_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=seu_app_id
 ```
 
-**OR** (Alternative - JSON format):
+#### Firebase Admin (Obrigatório para Servidor)
+```
+FIREBASE_ADMIN_PROJECT_ID=seu_projeto_id
+FIREBASE_ADMIN_CLIENT_EMAIL=email_da_conta_de_servico
+FIREBASE_ADMIN_PRIVATE_KEY=sua_chave_privada
+```
+
+**OU** (Alternativa - formato JSON):
 ```
 FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"..."}
 ```
 
-#### Stripe Configuration (Required for Payments)
+#### Configuração Stripe (Obrigatório para Pagamentos)
 ```
-STRIPE_SECRET_KEY=sk_live_... (or sk_test_... for testing)
+STRIPE_SECRET_KEY=sk_live_... (ou sk_test_... para testes)
 STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... (or pk_test_...)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... (ou pk_test_...)
 
-# Stripe Price IDs
+# IDs de Preço Stripe
 STRIPE_PRICE_ID_STARTER=price_...
 STRIPE_PRICE_ID_GROWTH=price_...
 STRIPE_PRICE_ID_PRO=price_...
 ```
 
-#### Application URL (Required)
+#### URL da Aplicação (Obrigatório)
 ```
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
 ```
-(Update this after first deployment with your actual domain)
+(Atualize isso após o primeiro deploy com seu domínio real)
 
-#### Email Service (ZeptoMail - Recommended)
-Puncto uses ZeptoMail for transactional emails (booking confirmations, reminders, professional invites, campaigns).
+#### Serviço de E-mail (ZeptoMail - Recomendado)
+O Puncto usa ZeptoMail para e-mails transacionais (confirmações de agendamento, lembretes, convites de profissionais, campanhas).
 ```
-ZEPTOMAIL_API_KEY=your_send_mail_token
-ZEPTOMAIL_FROM_EMAIL=noreply@your-verified-domain.com
+ZEPTOMAIL_API_KEY=seu_token_send_mail
+ZEPTOMAIL_FROM_EMAIL=noreply@seu-dominio-verificado.com
 ZEPTOMAIL_FROM_NAME=Puncto
 ```
-Get your token from [ZeptoMail](https://www.zoho.com/zeptomail/) → Agents → SMTP/API → Send Mail Token.
+Obtenha seu token em [ZeptoMail](https://www.zoho.com/zeptomail/) → Agents → SMTP/API → Send Mail Token.
 
-Alternative providers (Resend, Mailgun) are supported via `EMAIL_PROVIDER=resend` or `EMAIL_PROVIDER=mailgun` and their respective API keys.
+Provedores alternativos (Resend, Mailgun) são suportados via `EMAIL_PROVIDER=resend` ou `EMAIL_PROVIDER=mailgun` e suas respectivas chaves de API.
 
-#### Optional: Platform Admin Secret
+#### Opcional: Segredo Admin da Plataforma
 ```
-PLATFORM_ADMIN_CREATE_SECRET=your_random_secret_here
+PLATFORM_ADMIN_CREATE_SECRET=sua_string_secreta_aleatoria
 ```
 
-### 3.3 Where to Find These Values
+### 3.3 Onde Encontrar Esses Valores
 
 **Firebase:**
-- Go to Firebase Console → Project Settings → General
-- Scroll to "Your apps" → Web app config
-- Copy the values from `firebaseConfig`
+- Firebase Console → Project Settings → General
+- Role até "Your apps" → Config do app web
+- Copie os valores de `firebaseConfig`
 
 **Firebase Admin:**
 - Firebase Console → Project Settings → Service Accounts
-- Click "Generate New Private Key"
-- Download JSON file and extract values OR use the JSON directly
+- Clique em "Generate New Private Key"
+- Baixe o arquivo JSON e extraia os valores OU use o JSON diretamente
 
 **Stripe:**
 - Stripe Dashboard → Developers → API Keys
-- Copy Secret Key and Publishable Key
-- For Webhook Secret: Webhooks → Add endpoint → Copy signing secret
+- Copie Secret Key e Publishable Key
+- Para Webhook Secret: Webhooks → Add endpoint → Copie o signing secret
 
 ---
 
-## Step 4: Deploy
+## Passo 4: Fazer o Deploy
 
-### 4.1 Initial Deployment
+### 4.1 Deploy Inicial
 
-1. After adding all environment variables, click **"Deploy"**
-2. Wait for the build to complete (usually 2-5 minutes)
-3. Vercel will provide you with a URL like: `https://puncto-marketing-xyz.vercel.app`
+1. Após adicionar todas as variáveis de ambiente, clique em **"Deploy"**
+2. Aguarde a conclusão do build (geralmente 2-5 minutos)
+3. A Vercel fornecerá uma URL como: `https://puncto-marketing-xyz.vercel.app`
 
-### 4.2 Verify Deployment
+### 4.2 Verificar o Deploy
 
-1. Visit your deployment URL
-2. Check that:
-   - ✅ Header and Footer appear
-   - ✅ All pages load correctly
-   - ✅ No console errors
-   - ✅ Images and assets load
+1. Acesse a URL do deploy
+2. Confira que:
+   - ✅ Cabeçalho e Rodapé aparecem
+   - ✅ Todas as páginas carregam corretamente
+   - ✅ Sem erros no console
+   - ✅ Imagens e recursos carregam
 
 ---
 
-## Step 5: Configure Custom Domain (Optional)
+## Passo 5: Configurar Domínio Personalizado (Opcional)
 
-### 5.1 Add Domain in Vercel
+### 5.1 Adicionar Domínio na Vercel
 
-1. Go to your project → **Settings** → **Domains**
-2. Enter your domain (e.g., `puncto.com.br`)
-3. Follow Vercel's DNS configuration instructions
+1. Vá no seu projeto → **Settings** → **Domains**
+2. Digite seu domínio (ex: `puncto.com.br`)
+3. Siga as instruções de configuração DNS da Vercel
 
-### 5.2 Update DNS Records
+### 5.2 Atualizar Registros DNS
 
-Add these DNS records at your domain registrar:
+Adicione estes registros DNS no seu registrador de domínio:
 
-**For apex domain (puncto.com.br):**
+**Para domínio raiz (puncto.com.br):**
 ```
-Type: A
-Name: @
-Value: 76.76.21.21
-```
-
-**For www subdomain:**
-```
-Type: CNAME
-Name: www
-Value: cname.vercel-dns.com
+Tipo: A
+Nome: @
+Valor: 76.76.21.21
 ```
 
-### 5.3 Update Environment Variables
+**Para subdomínio www:**
+```
+Tipo: CNAME
+Nome: www
+Valor: cname.vercel-dns.com
+```
 
-After domain is configured, update:
+### 5.3 Atualizar Variáveis de Ambiente
+
+Após configurar o domínio, atualize:
 ```
 NEXT_PUBLIC_APP_URL=https://puncto.com.br
 ```
 
-Redeploy to apply changes.
+Faça redeploy para aplicar as alterações.
 
 ---
 
-## Step 6: Configure Stripe Webhooks
+## Passo 6: Configurar Webhooks do Stripe
 
-### 6.1 Add Webhook Endpoint in Stripe
+### 6.1 Adicionar Endpoint de Webhook no Stripe
 
-1. Go to Stripe Dashboard → **Webhooks**
-2. Click **"Add endpoint"**
-3. Enter: `https://your-domain.vercel.app/api/subscriptions/webhook`
-4. Select events:
+1. Acesse Stripe Dashboard → **Webhooks**
+2. Clique em **"Add endpoint"**
+3. Digite: `https://seu-dominio.vercel.app/api/subscriptions/webhook`
+4. Selecione os eventos:
    - `checkout.session.completed`
    - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
-5. Copy the **Signing Secret** and add to Vercel as `STRIPE_WEBHOOK_SECRET`
+5. Copie o **Signing Secret** e adicione na Vercel como `STRIPE_WEBHOOK_SECRET`
 
 ---
 
-## Step 7: Post-Deployment Checklist
+## Passo 7: Lista de Verificação Pós-Deploy
 
-- [ ] Test homepage loads correctly
-- [ ] Test all marketing pages (`/features`, `/pricing`, `/about`, etc.)
-- [ ] Verify Header and Footer appear on all pages
-- [ ] Test contact form submission
-- [ ] Verify Stripe checkout flow (test mode)
-- [ ] Check Firebase authentication works
-- [ ] Verify environment variables are set correctly
-- [ ] Test on mobile devices
-- [ ] Check Google Analytics (if configured)
-- [ ] Verify SSL certificate is active (automatic with Vercel)
-
----
-
-## Troubleshooting
-
-### Build Fails
-
-1. **Check build logs** in Vercel dashboard
-2. **Common issues:**
-   - Missing environment variables
-   - TypeScript errors
-   - Missing dependencies
-   - Build timeout (increase in settings)
-
-### Environment Variables Not Working
-
-1. Ensure variables start with `NEXT_PUBLIC_` for client-side access
-2. Redeploy after adding new variables
-3. Check variable names match exactly (case-sensitive)
-
-### Firebase Errors
-
-1. Verify Firebase config values are correct
-2. Check Firebase project has billing enabled (if using paid features)
-3. Ensure Firebase Admin credentials are valid
-
-### Domain Not Working
-
-1. Wait 24-48 hours for DNS propagation
-2. Verify DNS records are correct
-3. Check domain is verified in Vercel
+- [ ] Testar se a página inicial carrega corretamente
+- [ ] Testar todas as páginas de marketing (`/features`, `/pricing`, `/about`, etc.)
+- [ ] Verificar se Cabeçalho e Rodapé aparecem em todas as páginas
+- [ ] Testar envio do formulário de contato
+- [ ] Verificar fluxo de checkout do Stripe (modo teste)
+- [ ] Verificar se a autenticação Firebase funciona
+- [ ] Confirmar se as variáveis de ambiente estão definidas corretamente
+- [ ] Testar em dispositivos móveis
+- [ ] Verificar Google Analytics (se configurado)
+- [ ] Confirmar se o certificado SSL está ativo (automático com Vercel)
 
 ---
 
-## Continuous Deployment
+## Solução de Problemas
 
-Vercel automatically deploys when you push to your main branch:
+### Build Falha
 
-1. Make changes locally
-2. Commit and push:
+1. **Verifique os logs de build** no painel da Vercel
+2. **Problemas comuns:**
+   - Variáveis de ambiente ausentes
+   - Erros de TypeScript
+   - Dependências faltando
+   - Timeout do build (aumente nas configurações)
+
+### Variáveis de Ambiente Não Funcionam
+
+1. Variáveis devem começar com `NEXT_PUBLIC_` para acesso no cliente
+2. Faça redeploy após adicionar novas variáveis
+3. Verifique se os nomes das variáveis correspondem exatamente (sensível a maiúsculas/minúsculas)
+
+### Erros do Firebase
+
+1. Verifique se os valores de configuração do Firebase estão corretos
+2. Confirme se o projeto Firebase tem faturamento habilitado (se usar recursos pagos)
+3. Garanta que as credenciais do Firebase Admin são válidas
+
+### Domínio Não Funciona
+
+1. Aguarde 24-48 horas para propagação do DNS
+2. Verifique se os registros DNS estão corretos
+3. Confirme se o domínio está verificado na Vercel
+
+---
+
+## Deploy Contínuo
+
+A Vercel faz deploy automaticamente ao enviar para a branch main:
+
+1. Faça alterações localmente
+2. Commit e push:
    ```bash
    git add .
-   git commit -m "Your changes"
+   git commit -m "Suas alterações"
    git push origin main
    ```
-3. Vercel will automatically build and deploy
+3. A Vercel fará build e deploy automaticamente
 
 ---
 
-## Need Help?
+## Precisa de Ajuda?
 
-- Vercel Docs: https://vercel.com/docs
-- Next.js Deployment: https://nextjs.org/docs/deployment
-- Vercel Support: https://vercel.com/support
+- Documentação Vercel: https://vercel.com/docs
+- Deploy Next.js: https://nextjs.org/docs/deployment
+- Suporte Vercel: https://vercel.com/support
 
 ---
 
-## Quick Reference: Required Environment Variables
+## Referência Rápida: Variáveis de Ambiente Obrigatórias
 
 ```bash
-# Firebase (Client)
+# Firebase (Cliente)
 NEXT_PUBLIC_FIREBASE_API_KEY
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 NEXT_PUBLIC_FIREBASE_PROJECT_ID

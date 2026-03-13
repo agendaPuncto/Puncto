@@ -17,6 +17,18 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+function formatMessageTime(date: Date): string {
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return time;
+  if (isYesterday) return `Ontem ${time}`;
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + time;
+}
+
 export function PlatformWhatsAppChat() {
   const { firebaseUser } = useAuth();
   const [conversations, setConversations] = useState<PlatformContact[]>([]);
@@ -179,9 +191,9 @@ export function PlatformWhatsAppChat() {
       {/* Contacts sidebar */}
       <aside className="flex w-72 flex-shrink-0 flex-col border-r border-gray-200">
         <div className="border-b border-gray-200 px-4 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">Contacts</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Contatos</h3>
           <p className="mt-0.5 text-xs text-gray-500">
-            Conversations appear when someone messages you
+            Conversas aparecem quando alguém te enviar mensagem
           </p>
         </div>
         <div className="border-b border-gray-100 px-4 py-3">
@@ -199,7 +211,7 @@ export function PlatformWhatsAppChat() {
               onClick={addContact}
               className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
             >
-              Add
+              Adicionar
             </button>
           </div>
         </div>
@@ -211,7 +223,7 @@ export function PlatformWhatsAppChat() {
               disabled={loadingConversations}
               className="text-xs text-gray-500 hover:text-gray-700"
             >
-              Refresh
+              Atualizar
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -221,7 +233,7 @@ export function PlatformWhatsAppChat() {
               </div>
             ) : allContacts.length === 0 ? (
               <p className="px-4 py-6 text-sm text-gray-500">
-                No conversations yet. Add a number or wait for someone to message you.
+                Nenhuma conversa ainda. Adicione um número ou aguarde alguém te enviar mensagem.
               </p>
             ) : (
               <ul className="divide-y divide-gray-100">
@@ -265,7 +277,7 @@ export function PlatformWhatsAppChat() {
                 disabled={loadingMessages}
                 className="text-xs text-gray-500 hover:text-gray-700"
               >
-                Refresh
+                Atualizar
               </button>
             </div>
 
@@ -276,7 +288,7 @@ export function PlatformWhatsAppChat() {
                 </div>
               ) : threadMessages.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-500">
-                  No messages yet. Type below to send (recipient must have messaged you first).
+                  Nenhuma mensagem ainda. Digite abaixo para enviar (o destinatário precisa ter te enviado mensagem primeiro).
                 </p>
               ) : (
                 threadMessages.map((m) => (
@@ -297,9 +309,7 @@ export function PlatformWhatsAppChat() {
                           m.isOutgoing ? 'text-green-100' : 'text-gray-500'
                         }`}
                       >
-                        {m.timestamp instanceof Date
-                          ? m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatMessageTime(m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp))}
                       </p>
                     </div>
                   </div>
@@ -317,7 +327,7 @@ export function PlatformWhatsAppChat() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type a message..."
+                  placeholder="Digite uma mensagem..."
                   rows={2}
                   className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                   disabled={sending}
@@ -328,14 +338,14 @@ export function PlatformWhatsAppChat() {
                   disabled={!input.trim() || sending}
                   className="self-end rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {sending ? 'Sending...' : 'Send'}
+                  {sending ? 'Enviando...' : 'Enviar'}
                 </button>
               </div>
             </div>
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center bg-gray-50">
-            <p className="text-sm text-gray-500">Select a contact to view the conversation</p>
+            <p className="text-sm text-gray-500">Selecione um contato para ver a conversa</p>
           </div>
         )}
       </div>

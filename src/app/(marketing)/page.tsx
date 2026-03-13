@@ -29,12 +29,12 @@ const businessTypeToIndustrySlug: Record<BusinessTypeKey, string> = {
 };
 
 export default function HomePage() {
-  // Redirect to platform admin login when ?subdomain=admin (fallback when middleware doesn't run on localhost)
+  // Redirect to platform admin login when ?subdomain=primazia (fallback when middleware doesn't run on localhost)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('subdomain') === 'admin') {
-      window.location.replace('/auth/platform/login?subdomain=admin&returnUrl=/platform/dashboard');
+    if (params.get('subdomain') === 'admin' || params.get('subdomain') === 'primazia') {
+      window.location.replace('/auth/platform/login?subdomain=primazia&returnUrl=/platform/dashboard');
     }
   }, []);
 

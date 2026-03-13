@@ -111,8 +111,15 @@
     "connectTitle": "Connect your WhatsApp",
     "connected": "WhatsApp connected",
     "connectDesc": "Connect your business WhatsApp number so automated messages are sent from your number to your clients.",
+    "connectFacebookReason": "WhatsApp is owned by Meta (Facebook). To connect your number securely, Meta requires a one-time login to verify your business. We don't store any Facebook data.",
+    "connectNoFacebook": "Don't have a Facebook account?",
+    "connectNoFacebookSuffix": "we can connect your number manually.",
+    "contactSupport": "Contact support",
     "connectButton": "Connect WhatsApp",
     "connecting": "Connecting...",
-    "connectNotConfigured": "Embedded Signup is not configured. Contact support to enable per-business WhatsApp."
+    "connectNotConfigured": "Embedded Signup is not configured. Contact support to enable per-business WhatsApp.",
+    "bookingConfirmationsTitle": "Booking confirmations",
+    "bookingConfirmationsDesc": "When a booking is created, send confirmation automatically via:",
+    "sendViaWhatsApp": "Send via WhatsApp"
   }
 }

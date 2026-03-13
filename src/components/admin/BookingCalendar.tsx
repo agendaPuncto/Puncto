@@ -192,6 +192,11 @@ export function BookingCalendar({
                     <div className="truncate text-[10px] opacity-90">
                       {booking.customerData?.firstName} {booking.customerData?.lastName}
                     </div>
+                    {booking.professionalName && (
+                      <div className="truncate text-[10px] opacity-75">
+                        {booking.professionalName}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -271,7 +276,7 @@ export function BookingCalendar({
                     className={`text-xs p-1 rounded border ${getStatusColor(
                       booking.status
                     )}`}
-                    title={`${booking.serviceName} - ${booking.customerData?.firstName} ${booking.customerData?.lastName}`}
+                    title={`${booking.serviceName} - ${booking.customerData?.firstName} ${booking.customerData?.lastName}${booking.professionalName ? ` (${booking.professionalName})` : ''}`}
                   >
                     <div className="truncate">
                       {format(
@@ -282,6 +287,14 @@ export function BookingCalendar({
                       )}{' '}
                       {booking.serviceName}
                     </div>
+                    <div className="truncate text-[10px] opacity-80">
+                      {booking.customerData?.firstName} {booking.customerData?.lastName}
+                    </div>
+                    {booking.professionalName && (
+                      <div className="truncate text-[10px] opacity-75">
+                        {booking.professionalName}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {dayBookings.length > 3 && (

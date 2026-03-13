@@ -1,4 +1,5 @@
 import './globals.css';
+import { headers } from 'next/headers';
 import { NextIntlClientProvider } from 'next-intl';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
 import { QueryProvider } from '@/components/providers/QueryProvider';
@@ -27,12 +28,14 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const ignoreAuth = headers().get('x-ignore-auth') === 'true';
+
   return (
     <html lang="pt-BR">
       <body>
         <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
           <QueryProvider>
-            <AuthProvider>
+            <AuthProvider ignoreAuth={ignoreAuth}>
               {children}
             </AuthProvider>
           </QueryProvider>
