@@ -4,24 +4,338 @@ import { useState, useMemo, useEffect } from 'react';
 import { Customer } from '@/types/booking';
 import { useBookings } from '@/lib/queries/bookings';
 import { useUpdateCustomer } from '@/lib/queries/customers';
+import {
+  useAnamnesisForms,
+  useAnamnesisResponsesForPatient,
+  useSaveAnamnesisResponse,
+} from '@/lib/queries/anamnesis';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import type { AnamnesisForm as AnamnesisFormType, AnamnesisFormField } from '@/types/anamnesis';
 
 function normalizePhone(phone: string | undefined): string {
   if (!phone) return '';
   return phone.replace(/\D/g, '');
 }
 
+interface ProntuarioTabProps {
+  businessId: string;
+  patientId: string;
+  patientName: string;
+  forms: AnamnesisFormType[];
+  responses: import('@/types/anamnesis').AnamnesisResponse[];
+  loadingResponses: boolean;
+  saveResponseMutation: ReturnType<typeof useSaveAnamnesisResponse>;
+  filledByName?: string;
+  filledBy?: string;
+}
+
+function ProntuarioTab({
+  patientId,
+  forms,
+  responses,
+  loadingResponses,
+  saveResponseMutation,
+  filledByName,
+  filledBy,
+}: ProntuarioTabProps) {
+  const [selectedFormId, setSelectedFormId] = useState<string>('');
+  const [answers, setAnswers] = useState<Record<string, string | number | boolean | string[]>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const selectedForm = selectedFormId ? forms.find((f) => f.id === selectedFormId) : null;
+
+  const setAnswer = (fieldId: string, value: string | number | boolean | string[]) => {
+    setAnswers((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleSaveResponse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!selectedForm) return;
+    const requiredFields = (selectedForm.fields || []).filter((f) => f.required);
+    for (const f of requiredFields) {
+      const v = answers[f.id];
+      if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) {
+        setError(`Campo "${f.label}" é obrigatório`);
+        return;
+      }
+    }
+    try {
+      await saveResponseMutation.mutateAsync({
+        patientId,
+        formId: selectedForm.id,
+        formName: selectedForm.name,
+        answers: { ...answers },
+        filledBy,
+        filledByName,
+      });
+      setSelectedFormId('');
+      setAnswers({});
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar');
+    }
+  };
+
+  const renderField = (field: AnamnesisFormField) => {
+    const value = answers[field.id];
+    const onChange = (v: string | number | boolean | string[]) => setAnswer(field.id, v);
+    const baseClass = 'w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900';
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <textarea
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className={baseClass}
+            rows={3}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={(value as number) ?? ''}
+            onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+            className={baseClass}
+            required={field.required}
+          />
+        );
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className={baseClass}
+            required={field.required}
+          />
+        );
+      case 'checkbox':
+        const simNao = (value === true || value === 'Sim' ? 'Sim' : value === false || value === 'Não' ? 'Não' : '') as string;
+        return (
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                checked={simNao === 'Sim'}
+                onChange={() => onChange('Sim')}
+                className="rounded-full border-neutral-300"
+              />
+              <span className="text-sm text-neutral-700">Sim</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                checked={simNao === 'Não'}
+                onChange={() => onChange('Não')}
+                className="rounded-full border-neutral-300"
+              />
+              <span className="text-sm text-neutral-700">Não</span>
+            </label>
+          </div>
+        );
+      case 'select':
+        return (
+          <select
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className={baseClass}
+            required={field.required}
+          >
+            <option value="">Selecione...</option>
+            {(field.options || []).map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        );
+      case 'multiselect':
+        const arr = (Array.isArray(value) ? value : value ? [value] : []) as string[];
+        return (
+          <div className="space-y-2">
+            {(field.options || []).map((opt) => (
+              <label key={opt} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={arr.includes(opt)}
+                  onChange={(e) => {
+                    if (e.target.checked) onChange([...arr, opt]);
+                    else onChange(arr.filter((x) => x !== opt));
+                  }}
+                  className="rounded border-neutral-300"
+                />
+                <span className="text-sm text-neutral-700">{opt}</span>
+              </label>
+            ))}
+          </div>
+        );
+      default:
+        return (
+          <input
+            type="text"
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className={baseClass}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+    }
+  };
+
+  if (loadingResponses) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-medium text-neutral-700 mb-2">Preencher anamnese</h3>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[200px]">
+            <select
+              value={selectedFormId}
+              onChange={(e) => {
+                setSelectedFormId(e.target.value);
+                setAnswers({});
+                setError(null);
+              }}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            >
+              <option value="">Selecione um formulário</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {selectedForm && (
+          <form onSubmit={handleSaveResponse} className="mt-4 space-y-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            {(selectedForm.fields || []).map((field) => (
+              <div key={field.id}>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  {field.label}
+                  {field.required && <span className="text-red-500"> *</span>}
+                </label>
+                {renderField(field)}
+              </div>
+            ))}
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              >
+                Salvar no prontuário
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFormId('');
+                  setAnswers({});
+                  setError(null);
+                }}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-neutral-700 mb-2">Registros no prontuário</h3>
+        {responses.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Nenhum registro de anamnese ainda.</p>
+        ) : (
+          <ul className="space-y-2">
+            {responses.map((r) => {
+              const isExpanded = expandedId === r.id;
+              const filledAt = r.filledAt ? format(new Date(r.filledAt as Date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '';
+              return (
+                <li key={r.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-50"
+                  >
+                    <span className="font-medium text-neutral-900">{r.formName}</span>
+                    <span className="text-sm text-neutral-500">
+                      {filledAt}
+                      {r.filledByName && ` · ${r.filledByName}`}
+                    </span>
+                    <span className="text-neutral-400">{isExpanded ? '▼' : '▶'}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50 text-sm">
+                      <dl className="space-y-1">
+                        {Object.entries(r.answers || {}).map(([fieldId, val]) => {
+                          const form = forms.find((f) => f.id === r.formId);
+                          const label = form?.fields?.find((f) => f.id === fieldId)?.label ?? fieldId;
+                          const field = form?.fields?.find((f) => f.id === fieldId);
+                          let displayVal: string;
+                          if (Array.isArray(val)) {
+                            displayVal = val.join(', ');
+                          } else if (field?.type === 'checkbox' && typeof val === 'boolean') {
+                            displayVal = val ? 'Sim' : 'Não';
+                          } else {
+                            displayVal = String(val);
+                          }
+                          return (
+                            <div key={fieldId} className="flex gap-2">
+                              <dt className="text-neutral-500 font-medium min-w-[120px]">{label}:</dt>
+                              <dd className="text-neutral-900">{displayVal}</dd>
+                            </div>
+                          );
+                        })}
+                      </dl>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface CustomerDetailModalProps {
   customer: Customer;
   businessId: string;
   onClose: () => void;
+  isClinic?: boolean;
 }
 
-export function CustomerDetailModal({ customer, businessId, onClose }: CustomerDetailModalProps) {
+export function CustomerDetailModal({ customer, businessId, onClose, isClinic = false }: CustomerDetailModalProps) {
+  const { user } = useAuth();
   const { data: allBookings = [] } = useBookings(businessId);
   const updateCustomer = useUpdateCustomer(businessId);
-  const [activeTab, setActiveTab] = useState<'info' | 'records'>('info');
+  const { data: anamnesisForms = [] } = useAnamnesisForms(businessId);
+  const { data: anamnesisResponses = [], isLoading: loadingResponses } = useAnamnesisResponsesForPatient(
+    businessId,
+    isClinic ? customer.id : null
+  );
+  const saveResponse = useSaveAnamnesisResponse(businessId);
+
+  const [activeTab, setActiveTab] = useState<'info' | 'records' | 'prontuario'>('info');
   const [formData, setFormData] = useState({
     firstName: customer.firstName,
     lastName: customer.lastName,
@@ -29,7 +343,6 @@ export function CustomerDetailModal({ customer, businessId, onClose }: CustomerD
     email: customer.email || '',
     notes: customer.notes || '',
   });
-
   useEffect(() => {
     setFormData({
       firstName: customer.firstName,
@@ -132,6 +445,19 @@ export function CustomerDetailModal({ customer, businessId, onClose }: CustomerD
             >
               Histórico ({customerBookings.length})
             </button>
+            {isClinic && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('prontuario')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
+                  activeTab === 'prontuario'
+                    ? 'border-neutral-900 text-neutral-900'
+                    : 'border-transparent text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Prontuário ({anamnesisResponses.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -208,10 +534,24 @@ export function CustomerDetailModal({ customer, businessId, onClose }: CustomerD
             </form>
           )}
 
+          {activeTab === 'prontuario' && isClinic && (
+            <ProntuarioTab
+              businessId={businessId}
+              patientId={customer.id}
+              patientName={`${customer.firstName} ${customer.lastName}`}
+              forms={anamnesisForms}
+              responses={anamnesisResponses}
+              loadingResponses={loadingResponses}
+              saveResponseMutation={saveResponse}
+              filledByName={user?.displayName || user?.email || undefined}
+              filledBy={user?.id}
+            />
+          )}
+
           {activeTab === 'records' && (
             <div className="space-y-3">
               {customerBookings.length === 0 ? (
-                <p className="text-neutral-500 text-sm">Nenhum agendamento encontrado para este cliente.</p>
+                <p className="text-neutral-500 text-sm">Nenhum agendamento encontrado para este paciente.</p>
               ) : (
                 <div className="space-y-2">
                   {customerBookings.map((booking) => {

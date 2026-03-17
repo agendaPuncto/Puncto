@@ -5,11 +5,14 @@ import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
 import { Customer } from '@/types/booking';
 import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
+import { AnamnesisFormsSection } from '@/components/admin/AnamnesisFormsSection';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
+  const isClinic = business?.industry === 'clinic';
   const { data: customers = [], isLoading } = useCustomers(business.id);
   const createCustomer = useCreateCustomer(business.id);
+  const [activeSection, setActiveSection] = useState<'patients' | 'anamnese'>('patients');
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [search, setSearch] = useState('');
@@ -22,6 +25,19 @@ export default function AdminCustomersPage() {
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
+
+  const patientLabel = isClinic ? 'Paciente' : 'Cliente';
+  const patientsLabel = isClinic ? 'Pacientes' : 'Clientes';
+  const registerLabel = isClinic ? 'Cadastrar paciente' : 'Cadastrar cliente';
+  const newPatientLabel = isClinic ? 'Novo paciente' : 'Novo cliente';
+  const notesPlaceholder = isClinic ? 'Anotações sobre o paciente' : 'Anotações sobre o cliente';
+  const emptySearch = isClinic
+    ? 'Nenhum paciente encontrado com os filtros aplicados.'
+    : 'Nenhum cliente encontrado com os filtros aplicados.';
+  const emptyList = isClinic
+    ? 'Nenhum paciente cadastrado. Clique em "Cadastrar paciente" para adicionar.'
+    : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.';
+  const errorCreate = isClinic ? 'Erro ao cadastrar paciente' : 'Erro ao cadastrar cliente';
 
   const filteredAndSorted = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -81,7 +97,7 @@ export default function AdminCustomersPage() {
       setShowForm(false);
       setFormData({ firstName: '', lastName: '', phone: '', email: '', notes: '' });
     } catch (err: any) {
-      setError(err.message || 'Erro ao cadastrar cliente');
+      setError(err.message || errorCreate);
     }
   };
 
@@ -97,17 +113,54 @@ export default function AdminCustomersPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Clientes</h1>
-          <p className="text-neutral-600 mt-2">Base de dados de clientes</p>
+          <h1 className="text-3xl font-bold text-neutral-900">{patientsLabel}</h1>
+          <p className="text-neutral-600 mt-2">
+            {isClinic ? 'Base de dados de pacientes e prontuários' : 'Base de dados de clientes'}
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
-        >
-          Cadastrar cliente
-        </button>
+        {activeSection === 'patients' && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+          >
+            {registerLabel}
+          </button>
+        )}
       </div>
 
+      {isClinic && (
+        <div className="mb-6 flex gap-1 border-b border-neutral-200">
+          <button
+            type="button"
+            onClick={() => setActiveSection('patients')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              activeSection === 'patients'
+                ? 'border-neutral-900 text-neutral-900'
+                : 'border-transparent text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Pacientes
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('anamnese')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              activeSection === 'anamnese'
+                ? 'border-neutral-900 text-neutral-900'
+                : 'border-transparent text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Anamnese
+          </button>
+        </div>
+      )}
+
+      {activeSection === 'anamnese' && isClinic && (
+        <AnamnesisFormsSection businessId={business.id} />
+      )}
+
+      {activeSection === 'patients' && (
+        <>
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
@@ -129,14 +182,14 @@ export default function AdminCustomersPage() {
         </select>
         {search && (
           <span className="text-sm text-neutral-500">
-            {filteredAndSorted.length} de {customers.length} clientes
+            {filteredAndSorted.length} de {customers.length} {patientsLabel.toLowerCase()}
           </span>
         )}
       </div>
 
       {showForm && (
         <div className="mb-6 rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-4">Novo cliente</h2>
+          <h2 className="text-lg font-semibold text-neutral-900 mb-4">{newPatientLabel}</h2>
           <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -189,7 +242,7 @@ export default function AdminCustomersPage() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                placeholder="Anotações sobre o cliente"
+                placeholder={notesPlaceholder}
                 rows={2}
               />
             </div>
@@ -252,9 +305,7 @@ export default function AdminCustomersPage() {
           </table>
           {filteredAndSorted.length === 0 && (
             <div className="p-8 text-center text-neutral-500">
-              {search
-                ? 'Nenhum cliente encontrado com os filtros aplicados.'
-                : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.'}
+              {search ? emptySearch : emptyList}
             </div>
           )}
         </div>
@@ -265,7 +316,10 @@ export default function AdminCustomersPage() {
           customer={selectedCustomer}
           businessId={business.id}
           onClose={() => setSelectedCustomer(null)}
+          isClinic={isClinic}
         />
+      )}
+        </>
       )}
     </div>
   );

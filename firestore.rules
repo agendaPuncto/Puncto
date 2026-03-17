@@ -119,6 +119,21 @@ service cloud.firestore {
                        isPlatformAdmin();
       }
 
+      // Clinic: anamnese forms and responses (prontuário)
+      match /anamnesis_forms/{formId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
+      match /anamnesis_responses/{responseId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
       match /payments/{paymentId} {
         allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
         allow write: if isBusinessOwner(businessId) ||

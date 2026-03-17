@@ -415,7 +415,7 @@ export default function AdminProfessionalsPage() {
               >
                 Editar
               </button>
-              {professional.email && (
+              {professional.email && !isOwnerProfessional(professional) && (
                 <button
                   onClick={() => handleInvite(professional)}
                   disabled={!!invitingId}

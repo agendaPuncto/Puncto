@@ -88,6 +88,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <nav className="min-h-0 flex-1 overflow-y-auto p-4 space-y-1">
             {visibleNavItems.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+              const label = item.key === 'customers' && business?.industry === 'clinic'
+                ? t('patients')
+                : t(item.key);
               return (
                 <Link
                   key={item.href}
@@ -99,7 +102,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span>{t(item.key)}</span>
+                  <span>{label}</span>
                 </Link>
               );
             })}

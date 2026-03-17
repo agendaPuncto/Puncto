@@ -62,6 +62,13 @@ export function useProfessional(businessId: string, professionalId: string) {
   });
 }
 
+/** Remove undefined values; Firestore does not accept undefined. */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Record<string, unknown>;
+}
+
 /**
  * Create a new professional
  */
@@ -72,12 +79,12 @@ export function useCreateProfessional(businessId: string) {
     mutationFn: async (professionalData: Omit<Professional, 'id' | 'createdAt' | 'updatedAt' | 'businessId'>) => {
       const professionalsRef = collection(db, 'businesses', businessId, 'professionals');
       
-      const data = {
+      const data = stripUndefined({
         ...professionalData,
         businessId,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
-      };
+      });
 
       const docRef = await addDoc(professionalsRef, data);
       return { id: docRef.id, ...data };
@@ -122,10 +129,10 @@ export function useUpdateProfessional(businessId: string) {
     mutationFn: async ({ professionalId, updates }: { professionalId: string; updates: Partial<Professional> }) => {
       const professionalRef = doc(db, 'businesses', businessId, 'professionals', professionalId);
       
-      await updateDoc(professionalRef, {
+      await updateDoc(professionalRef, stripUndefined({
         ...updates,
         updatedAt: Timestamp.now(),
-      });
+      }) as Record<string, unknown>);
 
       return { id: professionalId, ...updates };
     },
