@@ -134,6 +134,14 @@ service cloud.firestore {
                        isPlatformAdmin();
       }
 
+      // EMR (Electronic Medical Records) - Batch Signature
+      match /patients/{patientId}/emrs/{emrId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
       match /payments/{paymentId} {
         allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
         allow write: if isBusinessOwner(businessId) ||

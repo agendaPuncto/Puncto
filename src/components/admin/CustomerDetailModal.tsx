@@ -9,6 +9,8 @@ import {
   useAnamnesisResponsesForPatient,
   useSaveAnamnesisResponse,
 } from '@/lib/queries/anamnesis';
+import { useEmrsForPatient } from '@/lib/queries/emr';
+import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,7 +27,9 @@ interface ProntuarioTabProps {
   patientName: string;
   forms: AnamnesisFormType[];
   responses: import('@/types/anamnesis').AnamnesisResponse[];
+  emrs: import('@/lib/queries/emr').EMRRecord[];
   loadingResponses: boolean;
+  loadingEmrs: boolean;
   saveResponseMutation: ReturnType<typeof useSaveAnamnesisResponse>;
   filledByName?: string;
   filledBy?: string;
@@ -33,9 +37,12 @@ interface ProntuarioTabProps {
 
 function ProntuarioTab({
   patientId,
+  patientName,
   forms,
   responses,
+  emrs,
   loadingResponses,
+  loadingEmrs,
   saveResponseMutation,
   filledByName,
   filledBy,
@@ -44,6 +51,24 @@ function ProntuarioTab({
   const [answers, setAnswers] = useState<Record<string, string | number | boolean | string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const hasRecords = responses.length > 0 || emrs.length > 0;
+
+  const allRecords = useMemo(() => {
+    const emrItems = emrs.map((emr) => ({
+      type: 'emr' as const,
+      id: `emr-${emr.id}`,
+      date: emr.signedAt ? new Date(emr.signedAt as Date).getTime() : new Date(emr.createdAt as Date).getTime(),
+      data: emr,
+    }));
+    const anamItems = responses.map((r) => ({
+      type: 'anam' as const,
+      id: `anam-${r.id}`,
+      date: r.filledAt ? new Date(r.filledAt as Date).getTime() : 0,
+      data: r,
+    }));
+    return [...emrItems, ...anamItems].sort((a, b) => b.date - a.date);
+  }, [emrs, responses]);
 
   const selectedForm = selectedFormId ? forms.find((f) => f.id === selectedFormId) : null;
 
@@ -191,7 +216,7 @@ function ProntuarioTab({
     }
   };
 
-  if (loadingResponses) {
+  if (loadingResponses || loadingEmrs) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900" />
@@ -201,10 +226,10 @@ function ProntuarioTab({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-medium text-neutral-700 mb-2">Preencher anamnese</h3>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[200px]">
+      <div className="flex flex-wrap items-center gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-neutral-700 mb-2">Preencher anamnese</h3>
+          <div className="flex flex-wrap items-end gap-2">
             <select
               value={selectedFormId}
               onChange={(e) => {
@@ -212,7 +237,7 @@ function ProntuarioTab({
                 setAnswers({});
                 setError(null);
               }}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              className="min-w-[200px] rounded-lg border border-neutral-300 px-3 py-2 text-sm"
             >
               <option value="">Selecione um formulário</option>
               {forms.map((f) => (
@@ -223,8 +248,15 @@ function ProntuarioTab({
             </select>
           </div>
         </div>
+        <Link
+          href={`/tenant/admin/patients/${patientId}/emr?name=${encodeURIComponent(patientName)}`}
+          className="self-end rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+        >
+          Preencher prontuário
+        </Link>
+      </div>
 
-        {selectedForm && (
+      {selectedForm && (
           <form onSubmit={handleSaveResponse} className="mt-4 space-y-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
             {(selectedForm.fields || []).map((field) => (
               <div key={field.id}>
@@ -256,23 +288,71 @@ function ProntuarioTab({
               </button>
             </div>
           </form>
-        )}
-      </div>
+      )}
 
       <div>
         <h3 className="text-sm font-medium text-neutral-700 mb-2">Registros no prontuário</h3>
-        {responses.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Nenhum registro de anamnese ainda.</p>
+        {!hasRecords ? (
+          <p className="text-neutral-500 text-sm">Nenhum registro de anamnese ou prontuário ainda.</p>
         ) : (
           <ul className="space-y-2">
-            {responses.map((r) => {
-              const isExpanded = expandedId === r.id;
+            {allRecords.map((item) => {
+              const isExpanded = expandedId === item.id;
+              if (item.type === 'emr') {
+                const emr = item.data;
+                const signedAt = emr.signedAt ? format(new Date(emr.signedAt as Date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '';
+                const p = emr.payload || {};
+                return (
+                  <li key={item.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-50"
+                    >
+                      <span className="font-medium text-neutral-900">Prontuário assinado</span>
+                      <span className="text-sm text-neutral-500">{signedAt}</span>
+                      <span className="text-neutral-400">{isExpanded ? '▼' : '▶'}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50 text-sm">
+                        <dl className="space-y-2">
+                          {p.patientComplaint && (
+                            <div>
+                              <dt className="text-neutral-500 font-medium">Queixa do paciente</dt>
+                              <dd className="text-neutral-900 mt-0.5 whitespace-pre-wrap">{p.patientComplaint}</dd>
+                            </div>
+                          )}
+                          {p.clinicalEvolution && (
+                            <div>
+                              <dt className="text-neutral-500 font-medium">Evolução clínica</dt>
+                              <dd className="text-neutral-900 mt-0.5 whitespace-pre-wrap">{p.clinicalEvolution}</dd>
+                            </div>
+                          )}
+                          {p.diagnosis && (
+                            <div>
+                              <dt className="text-neutral-500 font-medium">Diagnóstico</dt>
+                              <dd className="text-neutral-900 mt-0.5 whitespace-pre-wrap">{p.diagnosis}</dd>
+                            </div>
+                          )}
+                          {p.prescriptionNotes && (
+                            <div>
+                              <dt className="text-neutral-500 font-medium">Prescrição / Observações</dt>
+                              <dd className="text-neutral-900 mt-0.5 whitespace-pre-wrap">{p.prescriptionNotes}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      </div>
+                    )}
+                  </li>
+                );
+              }
+              const r = item.data;
               const filledAt = r.filledAt ? format(new Date(r.filledAt as Date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '';
               return (
-                <li key={r.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden">
+                <li key={item.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
                     className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-50"
                   >
                     <span className="font-medium text-neutral-900">{r.formName}</span>
@@ -330,6 +410,10 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
   const updateCustomer = useUpdateCustomer(businessId);
   const { data: anamnesisForms = [] } = useAnamnesisForms(businessId);
   const { data: anamnesisResponses = [], isLoading: loadingResponses } = useAnamnesisResponsesForPatient(
+    businessId,
+    isClinic ? customer.id : null
+  );
+  const { data: emrs = [], isLoading: loadingEmrs } = useEmrsForPatient(
     businessId,
     isClinic ? customer.id : null
   );
@@ -541,7 +625,9 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
               patientName={`${customer.firstName} ${customer.lastName}`}
               forms={anamnesisForms}
               responses={anamnesisResponses}
+              emrs={emrs}
               loadingResponses={loadingResponses}
+              loadingEmrs={loadingEmrs}
               saveResponseMutation={saveResponse}
               filledByName={user?.displayName || user?.email || undefined}
               filledBy={user?.id}

@@ -87,6 +87,8 @@ export interface FeatureFlags {
   loyaltyPrograms?: boolean;
   campaigns?: boolean;
   birthdayReminders?: boolean;
+  /** Clinic: Electronic medical records (prontuário eletrônico) with Gov.br signature */
+  healthRecords?: boolean;
 }
 
 export interface WorkingHours {

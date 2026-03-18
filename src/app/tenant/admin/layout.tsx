@@ -78,8 +78,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <ProtectedRoute allowedRoles={['owner', 'manager', 'professional']}>
       <div className="min-h-screen bg-neutral-50">
-        {/* Sidebar */}
-        <aside className="fixed left-0 top-0 flex h-full w-64 flex-col border-r border-neutral-200 bg-white">
+        {/* Sidebar (hidden when printing) */}
+        <aside className="fixed left-0 top-0 flex h-full w-64 flex-col border-r border-neutral-200 bg-white print:hidden">
           <div className="flex-shrink-0 p-4 border-b border-neutral-200">
             <h1 className="text-xl font-semibold">{business?.displayName || 'Admin'}</h1>
             <p className="text-sm text-neutral-600 mt-1">{t('adminPanel')}</p>
@@ -125,8 +125,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="ml-64 min-h-screen">
+        {/* Main Content (full-width when printing) */}
+        <main className="ml-64 min-h-screen print:ml-0">
           <div className="p-8">
             {children}
           </div>
