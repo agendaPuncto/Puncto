@@ -119,7 +119,7 @@ export default function Header() {
                 </Link>
               ))}
 
-              {/* Mobile CTA Buttons - Commented out until auth is readie
+              {/* Mobile CTA Buttons - Commented out until auth is ready
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <Link
                   href="/auth/login"
@@ -136,6 +136,7 @@ export default function Header() {
                   Começar Grátis
                 </Link>
               </div>
+              */}
 
             </div>
           </motion.div>
