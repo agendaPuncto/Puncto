@@ -4,8 +4,6 @@ import {
   query,
   where,
   getDocs,
-  orderBy,
-  limit,
   updateDoc,
   doc,
   Timestamp,
@@ -52,22 +50,31 @@ export function useNotifications(
     queryFn: async () => {
       const notificationsRef = collection(db, 'businesses', businessId, 'notifications');
 
+      // Build query - avoid orderBy to prevent composite index requirement
       let q: any = query(
         notificationsRef,
-        where('recipientUserId', '==', recipientUserId),
-        orderBy('createdAt', 'desc')
+        where('recipientUserId', '==', recipientUserId)
       );
 
       if (options?.onlyUnread) {
         q = query(q, where('isRead', '==', false));
       }
 
+      const snapshot = await getDocs(q);
+      let items = snapshot.docs.map((d) => normalizeNotification(d.data(), d.id));
+
+      // Sort by createdAt desc in memory
+      items.sort((a, b) => {
+        const aMs = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as any).getTime();
+        const bMs = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as any).getTime();
+        return bMs - aMs;
+      });
+
       if (options?.limit) {
-        q = query(q, limit(options.limit));
+        items = items.slice(0, options.limit);
       }
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map((d) => normalizeNotification(d.data(), d.id));
+      return items;
     },
     enabled: !!businessId && !!recipientUserId,
   });

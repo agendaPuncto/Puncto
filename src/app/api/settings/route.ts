@@ -34,12 +34,27 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const currentSettings = (businessDoc.data()?.settings as Record<string, unknown>) || {};
+    const incomingSettings = settings as Record<string, unknown>;
+
+    // Deep merge for nested objects (e.g. whatsapp with messageTemplates)
+    const mergedSettings: Record<string, unknown> = {
+      ...currentSettings,
+      ...incomingSettings,
+    };
+
+    if (incomingSettings.whatsapp && typeof incomingSettings.whatsapp === 'object') {
+      mergedSettings.whatsapp = {
+        ...(typeof currentSettings.whatsapp === 'object' && currentSettings.whatsapp
+          ? (currentSettings.whatsapp as Record<string, unknown>)
+          : {}),
+        ...(incomingSettings.whatsapp as Record<string, unknown>),
+      };
+    }
+
     // Update settings
     await businessRef.update({
-      settings: {
-        ...businessDoc.data()?.settings,
-        ...settings,
-      },
+      settings: mergedSettings,
       updatedAt: new Date(),
     });
 

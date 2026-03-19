@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
 import { Customer } from '@/types/booking';
@@ -38,6 +39,15 @@ export default function AdminCustomersPage() {
     ? 'Nenhum paciente cadastrado. Clique em "Cadastrar paciente" para adicionar.'
     : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.';
   const errorCreate = isClinic ? 'Erro ao cadastrar paciente' : 'Erro ao cadastrar cliente';
+
+  const searchParams = useSearchParams();
+  const customerIdFromUrl = searchParams?.get('customerId') ?? null;
+  useEffect(() => {
+    if (customerIdFromUrl && customers.length > 0) {
+      const c = customers.find((x) => x.id === customerIdFromUrl);
+      if (c) setSelectedCustomer(c);
+    }
+  }, [customerIdFromUrl, customers]);
 
   const filteredAndSorted = useMemo(() => {
     const q = search.toLowerCase().trim();

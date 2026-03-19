@@ -1,22 +1,15 @@
 'use client';
 
 import { useBusiness } from '@/lib/contexts/BusinessContext';
-import { useState, useEffect, useCallback } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import Script from 'next/script';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { WhatsAppConfig, ConfirmationChannel } from '@/types/business';
-
-declare global {
-  interface Window {
-    FB?: {
-      login: (callback: (res: { authResponse?: { code?: string } }) => void, opts: { config_id: string; response_type: string; override_default_response_type: boolean }) => void;
-      init: (opts: { appId: string; cookie: boolean; xfbml: boolean }) => void;
-    };
-    fbAsyncInit?: () => void;
-  }
-}
+import type { WhatsAppConfig, WhatsAppMessageTemplate, ConfirmationChannel } from '@/types/business';
+import { useCustomers } from '@/lib/queries/customers';
+import { Customer } from '@/types/booking';
+import { buildWhatsAppUrl } from '@/lib/utils/whatsappUrl';
 
 const TIER_TO_PLAN: Record<string, string> = {
   free: 'gratis',
@@ -28,9 +21,14 @@ const TIER_TO_PLAN: Record<string, string> = {
   enterprise: 'enterprise',
 };
 
+function generateId() {
+  return Math.random().toString(36).slice(2, 11);
+}
+
 export default function AdminWhatsAppPage() {
   const { business } = useBusiness();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const t = useTranslations('whatsapp');
 
   const tier = business?.subscription?.tier || 'free';
@@ -47,7 +45,18 @@ export default function AdminWhatsAppPage() {
   const [formData, setFormData] = useState<Partial<WhatsAppConfig>>({
     number: whatsapp.number || business?.phone || '',
     presetMessage: whatsapp.presetMessage || '',
+    messageTemplates: whatsapp.messageTemplates ?? [],
   });
+
+  const [editingTemplate, setEditingTemplate] = useState<WhatsAppMessageTemplate | null>(null);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateBody, setNewTemplateBody] = useState('');
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [contactSearch, setContactSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'send' | 'config'>('send');
+
+  const { data: customers = [] } = useCustomers(business?.id ?? '');
 
   useEffect(() => {
     const w = business?.settings?.whatsapp;
@@ -56,14 +65,19 @@ export default function AdminWhatsAppPage() {
         ...prev,
         number: w?.number || business?.phone || prev.number || '',
         presetMessage: w?.presetMessage ?? prev.presetMessage ?? '',
+        messageTemplates: w?.messageTemplates ?? prev.messageTemplates ?? [],
       }));
     }
-  }, [business?.id, business?.phone]);
+  }, [business?.id, business?.phone, business?.settings?.whatsapp]);
+
+  const templates: WhatsAppMessageTemplate[] = formData.messageTemplates ?? [];
+  const hasTemplates = templates.length > 0;
 
   const saveMutation = useMutation({
     mutationFn: async (data: {
       number: string;
       presetMessage?: string;
+      messageTemplates?: WhatsAppMessageTemplate[];
       confirmationChannels?: ConfirmationChannel[];
     }) => {
       const res = await fetch(`/api/settings?businessId=${business?.id}`, {
@@ -76,6 +90,7 @@ export default function AdminWhatsAppPage() {
               ...whatsapp,
               number: data.number,
               presetMessage: data.presetMessage,
+              messageTemplates: data.messageTemplates,
             },
             ...(data.confirmationChannels !== undefined && {
               confirmationChannels: data.confirmationChannels,
@@ -88,6 +103,7 @@ export default function AdminWhatsAppPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business', business?.id] });
+      router.refresh(); // Reload server data (layout fetches business)
     },
   });
 
@@ -96,7 +112,75 @@ export default function AdminWhatsAppPage() {
     saveMutation.mutate({
       number: formData.number || '',
       presetMessage: formData.presetMessage || undefined,
+      messageTemplates: templates,
     });
+  };
+
+  const handleAddTemplate = () => {
+    if (!newTemplateName.trim() || !newTemplateBody.trim()) return;
+    const newT: WhatsAppMessageTemplate = {
+      id: generateId(),
+      name: newTemplateName.trim(),
+      body: newTemplateBody.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      messageTemplates: [...(prev.messageTemplates ?? []), newT],
+    }));
+    setNewTemplateName('');
+    setNewTemplateBody('');
+  };
+
+  const handleUpdateTemplate = () => {
+    if (!editingTemplate) return;
+    setFormData((prev) => ({
+      ...prev,
+      messageTemplates: (prev.messageTemplates ?? []).map((t) =>
+        t.id === editingTemplate.id
+          ? { ...t, name: newTemplateName.trim(), body: newTemplateBody.trim() }
+          : t
+      ),
+    }));
+    setEditingTemplate(null);
+    setNewTemplateName('');
+    setNewTemplateBody('');
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      messageTemplates: (prev.messageTemplates ?? []).filter((t) => t.id !== id),
+    }));
+    if (selectedTemplateId === id) setSelectedTemplateId('');
+  };
+
+  const startEditTemplate = (t: WhatsAppMessageTemplate) => {
+    setEditingTemplate(t);
+    setNewTemplateName(t.name);
+    setNewTemplateBody(t.body);
+  };
+
+  const toggleContact = (id: string) => {
+    setSelectedContactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllContacts = (checked: boolean) => {
+    if (checked) {
+      setSelectedContactIds(new Set(filteredCustomers.map((c) => c.id)));
+    } else {
+      setSelectedContactIds(new Set());
+    }
+  };
+
+  const openWhatsApp = (customer: Customer, message: string) => {
+    if (!customer.phone?.trim()) return;
+    const url = buildWhatsAppUrl(customer.phone, message);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleToggleWhatsAppConfirmations = (checked: boolean) => {
@@ -107,168 +191,201 @@ export default function AdminWhatsAppPage() {
     saveMutation.mutate({
       number: formData.number || '',
       presetMessage: formData.presetMessage,
+      messageTemplates: templates,
       confirmationChannels: channels,
     });
   };
 
-  const appId = process.env.NEXT_PUBLIC_META_APP_ID;
-  const configId = process.env.NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID;
-
-  const { data: status, refetch: refetchStatus } = useQuery({
-    queryKey: ['whatsapp-status', business?.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/whatsapp/status?businessId=${business?.id}`);
-      if (!res.ok) throw new Error('Failed to fetch');
-      return res.json();
-    },
-    enabled: !!business?.id && isAutomated,
+  const filteredCustomers = customers.filter((c) => {
+    const q = contactSearch.toLowerCase().trim();
+    if (!q) return true;
+    const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+    const phone = (c.phone || '').replace(/\D/g, '');
+    const searchDigits = q.replace(/\D/g, '');
+    return name.includes(q) || phone.includes(searchDigits) || (c.email || '').toLowerCase().includes(q);
   });
 
-  const connectMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const res = await fetch('/api/whatsapp/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessId: business?.id, code }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to connect');
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      refetchStatus();
-      queryClient.invalidateQueries({ queryKey: ['business', business?.id] });
-      setFormData((prev) => ({ ...prev, number: data.phoneNumber || prev.number }));
-    },
-  });
-
-  const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
-
-  const handleConnectWhatsApp = useCallback(() => {
-    if (!window.FB || !configId || !business?.id) return;
-    window.FB.login(
-      (response) => {
-        const code = response.authResponse?.code;
-        if (code) connectMutation.mutate(code);
-      },
-      {
-        config_id: configId,
-        response_type: 'code',
-        override_default_response_type: true,
-      }
-    );
-  }, [configId, business?.id, connectMutation]);
-
-  const whatsappConnected = status?.connected ?? false;
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
+  const messageToSend = selectedTemplate?.body ?? formData.presetMessage ?? '';
+  const selectedContacts = filteredCustomers.filter((c) => selectedContactIds.has(c.id));
+  const customersWithPhone = selectedContacts.filter((c) => c.phone?.trim());
 
   return (
     <div>
-      {appId && (
-        <>
-          <div id="fb-root" />
-          <Script
-            id="fb-sdk"
-            strategy="lazyOnload"
-            dangerouslySetInnerHTML={{
-              __html: `
-                window.fbAsyncInit = function() {
-                  FB.init({
-                    appId: '${appId}',
-                    cookie: true,
-                    xfbml: true,
-                    version: 'v21.0'
-                  });
-                };
-                (function(d, s, id) {
-                  var js, fjs = d.getElementsByTagName(s)[0];
-                  if (d.getElementById(id)) return;
-                  js = d.createElement(s); js.id = id;
-                  js.src = 'https://connect.facebook.net/en_US/sdk.js';
-                  fjs.parentNode.insertBefore(js, fjs);
-                }(document, 'script', 'facebook-jssdk'));
-              `,
-            }}
-          />
-        </>
-      )}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-neutral-900">{t('title')}</h1>
-        <p className="text-neutral-600 mt-2">{t('subtitle')}</p>
+        <p className="text-neutral-600 mt-2">{t('manualSubtitle')}</p>
       </div>
 
-      {/* Connect WhatsApp - automated tier only */}
-      {isAutomated && (
-        <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-6">
-          <h2 className="text-lg font-semibold mb-2">{t('connectTitle')}</h2>
-          {whatsappConnected ? (
-            <div className="flex items-center gap-2 text-green-700">
-              <span>✓</span>
-              <span>{t('connected')} {status?.phoneNumber && `(${status.phoneNumber})`}</span>
-            </div>
-          ) : appId && configId ? (
-            <div>
-              {!isHttps && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-medium text-amber-800">
-                    O Facebook exige HTTPS para conectar. Use sua URL ngrok com <strong>https://</strong> (ex: https://xxx.ngrok-free.app) em vez de http://localhost.
-                  </p>
-                </div>
-              )}
-              <p className="text-sm text-neutral-600 mb-3">{t('connectDesc')}</p>
-              <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                <p className="text-sm text-blue-800">{t('connectFacebookReason')}</p>
-              </div>
-              <p className="text-sm text-neutral-600 mb-3">
-                {t('connectNoFacebook')}{' '}
-                <Link href="/contact" className="font-medium text-green-700 hover:text-green-800 underline">
-                  {t('contactSupport')}
-                </Link>
-                — {t('connectNoFacebookSuffix')}
-              </p>
-              <button
-                type="button"
-                onClick={handleConnectWhatsApp}
-                disabled={connectMutation.isPending || !isHttps}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {connectMutation.isPending ? t('connecting') : t('connectButton')}
-              </button>
-              {connectMutation.isError && (
-                <p className="mt-2 text-sm text-red-600">{connectMutation.error?.message}</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500">{t('connectNotConfigured')}</p>
-          )}
+      {/* Tabs */}
+      <div className="border-b border-neutral-200 mb-6">
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('send')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === 'send'
+                ? 'border-neutral-900 text-neutral-900'
+                : 'border-transparent text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {t('tabSend')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('config')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === 'config'
+                ? 'border-neutral-900 text-neutral-900'
+                : 'border-transparent text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            {t('tabConfig')}
+          </button>
         </div>
+      </div>
+
+      {activeTab === 'send' && (
+        <>
+          {/* Manual send: select contacts + open WhatsApp */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <h2 className="text-lg font-semibold mb-4">{t('sendManualTitle')}</h2>
+            <p className="text-sm text-neutral-600 mb-4">{t('sendManualDesc')}</p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">{t('selectTemplate')}</label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              >
+                <option value="">{t('selectTemplatePlaceholder')}</option>
+                {templates.map((tmpl) => (
+                  <option key={tmpl.id} value={tmpl.id}>
+                    {tmpl.name}
+                  </option>
+                ))}
+                {!hasTemplates && formData.presetMessage && (
+                  <option value="__preset__">{t('defaultMessage')}</option>
+                )}
+              </select>
+              {!hasTemplates && !formData.presetMessage && (
+                <p className="mt-1 text-xs text-amber-600">{t('createTemplateFirst')}</p>
+              )}
+            </div>
+
+            {selectedTemplateId === '__preset__' && (
+              <div className="mb-4 p-3 rounded-lg bg-neutral-50 text-sm text-neutral-700">
+                {formData.presetMessage}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">{t('selectContacts')}</label>
+              <input
+                type="text"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                placeholder={t('searchContactsPlaceholder')}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm mb-2"
+              />
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-neutral-200">
+                {filteredCustomers.length === 0 ? (
+                  <p className="p-4 text-sm text-neutral-500 text-center">{t('noCustomers')}</p>
+                ) : (
+                  <>
+                    <label className="flex items-center gap-2 px-4 py-2 border-b border-neutral-200 bg-neutral-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedContactIds.size === filteredCustomers.length && filteredCustomers.length > 0}
+                        onChange={(e) => toggleAllContacts(e.target.checked)}
+                        className="rounded border-neutral-300"
+                      />
+                      <span className="text-sm font-medium">{t('selectAll')}</span>
+                    </label>
+                    {filteredCustomers.map((c) => (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-neutral-50 ${
+                          !c.phone?.trim() ? 'opacity-50' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedContactIds.has(c.id)}
+                          onChange={() => toggleContact(c.id)}
+                          disabled={!c.phone?.trim()}
+                          className="rounded border-neutral-300"
+                        />
+                        <span className="text-sm flex-1">
+                          {c.firstName} {c.lastName}
+                          {c.phone && (
+                            <span className="text-neutral-500 ml-1">· {c.phone}</span>
+                          )}
+                        </span>
+                        {!c.phone?.trim() && (
+                          <span className="text-xs text-amber-600">{t('noPhone')}</span>
+                        )}
+                      </label>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {selectedContacts.length > 0 && messageToSend && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-neutral-700">
+                  {t('openWhatsAppFor')} ({customersWithPhone.length} {t('contacts')})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {customersWithPhone.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => openWhatsApp(c, messageToSend)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700"
+                    >
+                      <span>WhatsApp</span>
+                      <span className="font-medium">
+                        {c.firstName} {c.lastName}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedContacts.length > 0 && !messageToSend && (
+              <p className="text-sm text-amber-600">{t('selectTemplateFirst')}</p>
+            )}
+
+            {selectedContacts.length > 0 && messageToSend && customersWithPhone.length === 0 && (
+              <p className="text-sm text-amber-600">{t('noContactsWithPhone')}</p>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-lg border border-neutral-200 bg-neutral-50 p-6">
+            <h3 className="font-medium text-neutral-800 mb-2">{t('howItWorksTitle')}</h3>
+            <p className="text-sm text-neutral-600 mb-3">{t('howItWorksManual')}</p>
+            <ol className="list-decimal list-inside text-sm text-neutral-600 space-y-1">
+              <li>{t('step1New')}</li>
+              <li>{t('step2New')}</li>
+              <li>{t('step3')}</li>
+              <li>{t('step4')}</li>
+            </ol>
+          </div>
+        </>
       )}
 
-      {/* Mode badge */}
-      <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{isAutomated ? '🤖' : '✋'}</span>
-          <div>
-            <p className="font-medium text-neutral-900">
-              {isAutomated ? t('modeAutomated') : t('modeManual')}
-            </p>
-            <p className="text-sm text-neutral-600">
-              {isAutomated ? t('modeAutomatedDesc') : t('modeManualDesc')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-lg border border-neutral-200 bg-white p-6 space-y-6">
+      {activeTab === 'config' && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Config: number + templates */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6 space-y-6">
           <h2 className="text-lg font-semibold">{t('configTitle')}</h2>
 
-          {/* Business WhatsApp number - used for manual link display and automated API */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              {t('numberLabel')}
-            </label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('numberLabel')}</label>
             <input
               type="tel"
               value={formData.number || ''}
@@ -279,8 +396,123 @@ export default function AdminWhatsAppPage() {
             <p className="mt-1 text-xs text-neutral-500">{t('numberHint')}</p>
           </div>
 
-          {/* Booking confirmations via WhatsApp - automated tier only */}
-          {isAutomated && whatsappConnected && (
+          {/* Message templates */}
+          <div>
+            <h3 className="text-sm font-medium text-neutral-700 mb-2">{t('templatesTitle')}</h3>
+            <p className="text-xs text-neutral-500 mb-3">{t('templatesHint')}</p>
+
+            {editingTemplate ? (
+              <div className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+                <input
+                  type="text"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  placeholder={t('templateNamePlaceholder')}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                <textarea
+                  value={newTemplateBody}
+                  onChange={(e) => setNewTemplateBody(e.target.value)}
+                  placeholder={t('presetMessagePlaceholder')}
+                  rows={3}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUpdateTemplate}
+                    className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-800"
+                  >
+                    {t('templateSave')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTemplate(null);
+                      setNewTemplateName('');
+                      setNewTemplateBody('');
+                    }}
+                    className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    {t('templateCancel')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+                <input
+                  type="text"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  placeholder={t('templateNamePlaceholder')}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                <textarea
+                  value={newTemplateBody}
+                  onChange={(e) => setNewTemplateBody(e.target.value)}
+                  placeholder={t('presetMessagePlaceholder')}
+                  rows={3}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTemplate}
+                  className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-800"
+                >
+                  {t('templateAdd')}
+                </button>
+              </div>
+            )}
+
+            {templates.length > 0 && (
+              <ul className="space-y-2">
+                {templates.map((tmpl) => (
+                  <li
+                    key={tmpl.id}
+                    className="flex items-start justify-between rounded-lg border border-neutral-200 p-3 bg-white"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-neutral-900 text-sm">{tmpl.name}</p>
+                      <p className="text-xs text-neutral-600 mt-0.5 truncate">{tmpl.body}</p>
+                    </div>
+                    <div className="flex gap-1 ml-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditTemplate(tmpl)}
+                        className="rounded px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
+                      >
+                        {t('templateEdit')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTemplate(tmpl.id)}
+                        className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        {t('templateDelete')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Legacy preset message - keep if no templates yet */}
+          {!hasTemplates && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('presetMessageLabel')}</label>
+              <textarea
+                value={formData.presetMessage || ''}
+                onChange={(e) => setFormData({ ...formData, presetMessage: e.target.value })}
+                placeholder={t('presetMessagePlaceholder')}
+                rows={4}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-neutral-500">{t('presetMessageHint')}</p>
+            </div>
+          )}
+
+          {isAutomated && sendConfirmationsViaWhatsApp && (
             <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
               <h3 className="font-medium text-neutral-900 mb-2">{t('bookingConfirmationsTitle')}</h3>
               <p className="text-sm text-neutral-600 mb-3">{t('bookingConfirmationsDesc')}</p>
@@ -297,21 +529,6 @@ export default function AdminWhatsAppPage() {
             </div>
           )}
 
-          {/* Preset message - for manual mode: pre-filled when user opens WhatsApp */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              {t('presetMessageLabel')}
-            </label>
-            <textarea
-              value={formData.presetMessage || ''}
-              onChange={(e) => setFormData({ ...formData, presetMessage: e.target.value })}
-              placeholder={t('presetMessagePlaceholder')}
-              rows={4}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-xs text-neutral-500">{t('presetMessageHint')}</p>
-          </div>
-
           <div className="pt-4">
             <button
               type="submit"
@@ -322,28 +539,8 @@ export default function AdminWhatsAppPage() {
             </button>
           </div>
         </div>
-
-        {/* How it works - manual mode */}
-        {!isAutomated && (
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
-            <h3 className="font-medium text-neutral-800 mb-2">{t('howItWorksTitle')}</h3>
-            <p className="text-sm text-neutral-600 mb-3">{t('howItWorksManual')}</p>
-            <ol className="list-decimal list-inside text-sm text-neutral-600 space-y-1">
-              <li>{t('step1')}</li>
-              <li>{t('step2')}</li>
-              <li>{t('step3')}</li>
-              <li>{t('step4')}</li>
-            </ol>
-          </div>
-        )}
-
-        {isAutomated && (
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
-            <h3 className="font-medium text-neutral-800 mb-2">{t('howItWorksTitle')}</h3>
-            <p className="text-sm text-neutral-600">{t('howItWorksAutomated')}</p>
-          </div>
-        )}
-      </form>
+        </form>
+      )}
     </div>
   );
 }

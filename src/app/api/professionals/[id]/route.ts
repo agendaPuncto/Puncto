@@ -80,7 +80,18 @@ export async function PATCH(
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (workingHours && typeof workingHours === 'object') {
-      updates.workingHours = workingHours;
+      const businessDoc = await db.collection('businesses').doc(businessId).get();
+      const businessData = businessDoc.data();
+      const businessWh = businessData?.settings?.workingHours || {};
+      const sanitized: Record<string, { open: string; close: string; closed: boolean }> = { ...workingHours };
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      for (const day of days) {
+        const b = businessWh[day];
+        if (b && typeof b === 'object' && (b as { closed?: boolean }).closed === true) {
+          sanitized[day] = { open: (b as any).open ?? '09:00', close: (b as any).close ?? '18:00', closed: true };
+        }
+      }
+      updates.workingHours = sanitized;
     }
 
     await professionalRef.update(updates);

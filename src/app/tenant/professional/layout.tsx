@@ -32,6 +32,7 @@ function ProfessionalLayoutInner({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: '/tenant/professional', label: 'Agenda', icon: '📅' },
+    { href: '/tenant/professional/bookings', label: 'Agendamentos', icon: '📋' },
     { href: '/tenant/professional/notifications', label: 'Notificações', icon: '🔔' },
     { href: '/tenant/professional/clients', label: 'Clientes', icon: '👤' },
     { href: '/tenant/professional/services', label: 'Serviços', icon: '✂️' },

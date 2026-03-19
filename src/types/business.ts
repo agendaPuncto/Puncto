@@ -99,9 +99,17 @@ export interface WorkingHours {
   };
 }
 
+export interface WhatsAppMessageTemplate {
+  id: string;
+  name: string;
+  body: string;
+}
+
 export interface WhatsAppConfig {
   number: string; // Business WhatsApp number
-  presetMessage?: string; // Default message for manual mode (pre-filled when opening wa.me)
+  presetMessage?: string; // Legacy: single default message (kept for backward compat)
+  /** Multiple message templates for manual WhatsApp mode */
+  messageTemplates?: WhatsAppMessageTemplate[];
   apiProvider?: 'twilio' | 'maytapi' | 'wati' | 'evolution';
   apiKey?: string;
   instanceName?: string;
@@ -222,6 +230,14 @@ export interface Professional {
   updatedAt: Timestamp | Date;
 }
 
+/** Product from inventory linked to a service, with quantity needed per service */
+export interface ServiceInventoryItem {
+  inventoryItemId: string;
+  inventoryItemName?: string;
+  quantity: number;
+  unit?: string;
+}
+
 export interface Service {
   id: string;
   businessId: string;
@@ -234,6 +250,8 @@ export interface Service {
   professionalIds: string[];
   locationIds?: string[];
   active: boolean;
+  /** Optional: products from inventory needed for this service */
+  inventoryItems?: ServiceInventoryItem[];
   requiresDeposit?: boolean;
   depositAmount?: number;
   maxAdvanceBookingDays?: number;

@@ -2,36 +2,44 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
+import { useProfessionals } from '@/lib/queries/professionals';
 import { useBookings, useUpdateBooking } from '@/lib/queries/bookings';
 import { BookingCalendar } from '@/components/admin/BookingCalendar';
 import { BookingStatus } from '@/types/booking';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export default function AdminBookingsPage() {
+export default function ProfessionalBookingsPage() {
+  const params = useParams();
+  const professionalId = params?.professionalId as string;
   const { business } = useBusiness();
+  const { data: professionals } = useProfessionals(business?.id ?? '');
+  const professional = professionals?.find((p) => p.id === professionalId);
+
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
 
-  const filters: any = {};
-  if (statusFilter !== 'all') {
-    filters.status = statusFilter;
-  }
+  const { data: bookings, isLoading } = useBookings(business?.id ?? '', {
+    professionalId,
+  });
+  const updateBooking = useUpdateBooking(business?.id ?? '');
 
-  const { data: bookings, isLoading } = useBookings(business.id, filters);
-  const updateBooking = useUpdateBooking(business.id);
-
-  const filteredBookings = bookings?.filter((booking) => {
+  const filteredBookings = (bookings?.filter((booking) => {
     if (dateFilter) {
-      const bookingDate = booking.scheduledDateTime instanceof Date
-        ? booking.scheduledDateTime
-        : new Date(booking.scheduledDateTime as any);
+      const bookingDate =
+        booking.scheduledDateTime instanceof Date
+          ? booking.scheduledDateTime
+          : new Date(booking.scheduledDateTime as any);
       return format(bookingDate, 'yyyy-MM-dd') === dateFilter;
     }
+    if (statusFilter !== 'all') {
+      return booking.status === statusFilter;
+    }
     return true;
-  }) || [];
+  }) || []);
 
   const handleStatusChange = async (bookingId: string, newStatus: BookingStatus) => {
     await updateBooking.mutateAsync({
@@ -40,79 +48,111 @@ export default function AdminBookingsPage() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || !professional) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900" />
       </div>
     );
   }
 
+  if (!professional) {
+    return (
+      <div className="text-center py-12 text-neutral-500">
+        Profissional não encontrado.{' '}
+        <Link href="/tenant/admin/professionals" className="text-neutral-900 underline">
+          Voltar aos profissionais
+        </Link>
+      </div>
+    );
+  }
+
+  const isClinic = business?.industry === 'clinic';
+  const clientLabel = isClinic ? 'Paciente' : 'Cliente';
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/tenant/admin/professionals"
+            className="text-sm text-neutral-600 hover:text-neutral-900"
+          >
+            ← Profissionais
+          </Link>
+          <Link
+            href="/tenant/admin/bookings"
+            className="text-sm text-neutral-600 hover:text-neutral-900"
+          >
+            Ver todos os agendamentos
+          </Link>
+        </div>
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Agendamentos</h1>
-          <p className="text-neutral-600 mt-2">Gerencie todos os agendamentos</p>
+          <h1 className="text-3xl font-bold text-neutral-900">
+            Agendamentos – {professional.name}
+          </h1>
+          <p className="text-neutral-600 mt-2">
+            Gerencie os agendamentos deste profissional
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        >
+          <option value="all">Todos os status</option>
+          <option value="pending">Pendente</option>
+          <option value="confirmed">Confirmado</option>
+          <option value="completed">Concluído</option>
+          <option value="cancelled">Cancelado</option>
+          <option value="no_show">Não compareceu</option>
+        </select>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          />
+          {dateFilter && (
+            <button
+              type="button"
+              onClick={() => setDateFilter('')}
+              className="text-sm text-neutral-600 hover:text-neutral-900"
+            >
+              Todas
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        <div className="flex gap-2">
+          <button
+            onClick={() => setView('calendar')}
+            className={`rounded-lg px-4 py-2 text-sm ${
+              view === 'calendar' ? 'bg-neutral-900 text-white' : 'border'
+            }`}
           >
-            <option value="all">Todos os status</option>
-            <option value="pending">Pendente</option>
-            <option value="confirmed">Confirmado</option>
-            <option value="completed">Concluído</option>
-            <option value="cancelled">Cancelado</option>
-            <option value="no_show">Não compareceu</option>
-          </select>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-            />
-            {dateFilter && (
-              <button
-                type="button"
-                onClick={() => setDateFilter('')}
-                className="text-sm text-neutral-600 hover:text-neutral-900"
-              >
-                Todas
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setView('calendar')}
-              className={`rounded-lg px-4 py-2 text-sm ${
-                view === 'calendar' ? 'bg-neutral-900 text-white' : 'border'
-              }`}
-            >
-              Calendário
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`rounded-lg px-4 py-2 text-sm ${
-                view === 'list' ? 'bg-neutral-900 text-white' : 'border'
-              }`}
-            >
-              Lista
-            </button>
-          </div>
+            Calendário
+          </button>
+          <button
+            onClick={() => setView('list')}
+            className={`rounded-lg px-4 py-2 text-sm ${
+              view === 'list' ? 'bg-neutral-900 text-white' : 'border'
+            }`}
+          >
+            Lista
+          </button>
         </div>
       </div>
 
       {view === 'calendar' ? (
         <BookingCalendar
           bookings={filteredBookings}
-          workingHours={business?.settings?.workingHours}
+          workingHours={professional.workingHours ?? business?.settings?.workingHours}
           onStatusChange={handleStatusChange}
         />
       ) : (
@@ -121,19 +161,29 @@ export default function AdminBookingsPage() {
             <table className="w-full">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Cliente</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Serviço</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Profissional</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Data/Hora</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">
+                    {clientLabel}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">
+                    Serviço
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">
+                    Data/Hora
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
                 {filteredBookings.map((booking) => {
-                  const bookingDate = booking.scheduledDateTime instanceof Date
-                    ? booking.scheduledDateTime
-                    : new Date(booking.scheduledDateTime as any);
+                  const bookingDate =
+                    booking.scheduledDateTime instanceof Date
+                      ? booking.scheduledDateTime
+                      : new Date(booking.scheduledDateTime as any);
                   const customerName = `${booking.customerData?.firstName || ''} ${booking.customerData?.lastName || ''}`.trim() || '—';
 
                   return (
@@ -151,18 +201,6 @@ export default function AdminBookingsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm">{booking.serviceName}</td>
-                      <td className="px-6 py-4 text-sm">
-                        {booking.professionalId ? (
-                          <Link
-                            href={`/tenant/admin/professionals/${booking.professionalId}/bookings`}
-                            className="font-medium text-neutral-900 hover:underline"
-                          >
-                            {booking.professionalName}
-                          </Link>
-                        ) : (
-                          booking.professionalName
-                        )}
-                      </td>
                       <td className="px-6 py-4 text-sm">
                         {format(bookingDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </td>
@@ -190,7 +228,9 @@ export default function AdminBookingsPage() {
                       <td className="px-6 py-4 text-sm">
                         <select
                           value={booking.status}
-                          onChange={(e) => handleStatusChange(booking.id, e.target.value as BookingStatus)}
+                          onChange={(e) =>
+                            handleStatusChange(booking.id, e.target.value as BookingStatus)
+                          }
                           className="rounded border border-neutral-300 px-2 py-1 text-xs"
                         >
                           <option value="pending">Pendente</option>

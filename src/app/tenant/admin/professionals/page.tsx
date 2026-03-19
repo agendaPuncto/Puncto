@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
@@ -409,6 +410,12 @@ export default function AdminProfessionalsPage() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href={`/tenant/admin/professionals/${professional.id}/bookings`}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Agendamentos
+              </Link>
               <button
                 onClick={() => handleEdit(professional)}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"

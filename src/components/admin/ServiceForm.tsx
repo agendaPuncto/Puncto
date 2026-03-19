@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Service } from '@/types/business';
+import { Service, ServiceInventoryItem } from '@/types/business';
 import { useProfessionals } from '@/lib/queries/professionals';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
+import { InventoryItem } from '@/types/inventory';
 
 interface ServiceFormProps {
   service?: Service;
@@ -15,6 +16,7 @@ interface ServiceFormProps {
 export function ServiceForm({ service, categories = [], onSubmit, onCancel }: ServiceFormProps) {
   const { business } = useBusiness();
   const { data: professionals } = useProfessionals(business.id);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
   const [formData, setFormData] = useState({
     name: service?.name || '',
@@ -24,7 +26,17 @@ export function ServiceForm({ service, categories = [], onSubmit, onCancel }: Se
     durationMinutes: service?.durationMinutes || 30,
     professionalIds: service?.professionalIds || [],
     active: service?.active ?? true,
+    inventoryItems: (service?.inventoryItems ?? []) as ServiceInventoryItem[],
   });
+
+  useEffect(() => {
+    if (business?.id) {
+      fetch(`/api/inventory?businessId=${business.id}`)
+        .then((r) => r.json())
+        .then((d) => setInventoryItems(d.items ?? []))
+        .catch(() => setInventoryItems([]));
+    }
+  }, [business?.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +44,54 @@ export function ServiceForm({ service, categories = [], onSubmit, onCancel }: Se
       ...formData,
       price: Math.round(parseFloat(formData.price) * 100),
       currency: business.settings.currency || 'BRL',
+      inventoryItems: formData.inventoryItems,
     });
+  };
+
+  const addInventoryItem = () => {
+    const existing = formData.inventoryItems.map((i) => i.inventoryItemId);
+    const available = inventoryItems.find((i) => !existing.includes(i.id));
+    if (!available) return;
+    setFormData((prev) => ({
+      ...prev,
+      inventoryItems: [
+        ...prev.inventoryItems,
+        {
+          inventoryItemId: available.id,
+          inventoryItemName: available.name,
+          quantity: 1,
+          unit: available.unit,
+        },
+      ],
+    }));
+  };
+
+  const updateInventoryItem = (index: number, field: keyof ServiceInventoryItem, value: string | number) => {
+    setFormData((prev) => {
+      const next = [...prev.inventoryItems];
+      const item = next[index];
+      if (!item) return prev;
+      if (field === 'inventoryItemId') {
+        const inv = inventoryItems.find((i) => i.id === value);
+        next[index] = {
+          ...item,
+          inventoryItemId: value as string,
+          inventoryItemName: inv?.name,
+          quantity: item.quantity,
+          unit: inv?.unit,
+        };
+      } else if (field === 'quantity') {
+        next[index] = { ...item, quantity: Number(value) || 0 };
+      }
+      return { ...prev, inventoryItems: next };
+    });
+  };
+
+  const removeInventoryItem = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      inventoryItems: prev.inventoryItems.filter((_, i) => i !== index),
+    }));
   };
 
   const toggleProfessional = (professionalId: string) => {
@@ -142,6 +201,94 @@ export function ServiceForm({ service, categories = [], onSubmit, onCancel }: Se
                 <p className="text-sm text-neutral-500">Nenhum profissional cadastrado</p>
               )}
             </div>
+          </div>
+
+          {/* Produtos do estoque (opcional) */}
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            <h3 className="text-sm font-medium text-neutral-700 mb-2">
+              Produtos do estoque (opcional)
+            </h3>
+            <p className="text-xs text-neutral-500 mb-3">
+              Vincule produtos do estoque e informe a quantidade necessária para este serviço.
+            </p>
+            {inventoryItems.length === 0 ? (
+              <p className="text-sm text-neutral-500">
+                Nenhum produto cadastrado no estoque. Cadastre na aba Estoque para vincular.
+              </p>
+            ) : (
+              <>
+                {formData.inventoryItems.map((ing, index) => {
+                  const invItem = inventoryItems.find((i) => i.id === ing.inventoryItemId);
+                  const displayName = invItem?.name ?? ing.inventoryItemName ?? 'Produto não encontrado';
+                  const displayUnit = invItem?.unit ?? ing.unit ?? 'un';
+                  return (
+                  <div
+                    key={`${ing.inventoryItemId}-${index}`}
+                    className="flex items-center gap-2 mb-2"
+                  >
+                    <select
+                      value={ing.inventoryItemId}
+                      onChange={(e) =>
+                        updateInventoryItem(index, 'inventoryItemId', e.target.value)
+                      }
+                      className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    >
+                      {!invItem && (
+                        <option value={ing.inventoryItemId}>
+                          {displayName} (produto pode ter sido removido)
+                        </option>
+                      )}
+                      {inventoryItems.map((item) => {
+                        const used = formData.inventoryItems.some(
+                          (x, i) => i !== index && x.inventoryItemId === item.id
+                        );
+                        return (
+                          <option
+                            key={item.id}
+                            value={item.id}
+                            disabled={used}
+                          >
+                            {item.name} ({item.unit})
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={ing.quantity}
+                      onChange={(e) =>
+                        updateInventoryItem(index, 'quantity', e.target.value)
+                      }
+                      placeholder="Qtd"
+                      className="w-24 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    />
+                    <span className="text-sm text-neutral-500 shrink-0">
+                      {displayUnit}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeInventoryItem(index)}
+                      className="rounded p-2 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
+                      title="Remover"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+                })}
+                {formData.inventoryItems.length < inventoryItems.length && (
+                  <button
+                    type="button"
+                    onClick={addInventoryItem}
+                    className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+                  >
+                    + Adicionar produto
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

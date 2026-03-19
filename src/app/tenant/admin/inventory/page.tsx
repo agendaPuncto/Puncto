@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { InventoryItem } from '@/types/inventory';
 
-const CATEGORIES = ['ingredients', 'supplies', 'equipment', 'outros'];
+const CATEGORIES = ['Ingredientes', 'Produtos', 'Equipamentos', 'Outros'];
 const UNITS = ['kg', 'g', 'L', 'ml', 'unidade', 'caixa', 'pacote'];
 
 export default function AdminInventoryPage() {
