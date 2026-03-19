@@ -117,6 +117,18 @@ export function useCreateBooking(businessId: string) {
       };
 
       const docRef = await addDoc(bookingsRef, data);
+
+      // Create in-app notifications (fallback when Cloud Functions aren't running)
+      try {
+        await fetch('/api/bookings/create-notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, bookingId: docRef.id }),
+        });
+      } catch {
+        // Non-blocking
+      }
+
       return { id: docRef.id, ...data };
     },
     onSuccess: () => {

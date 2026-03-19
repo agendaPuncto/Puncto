@@ -63,10 +63,13 @@ export async function GET(request: NextRequest) {
       }
       return out;
     };
-    let workingHours = business?.settings?.workingHours || {};
-    workingHours = Object.keys(workingHours).length === 0 ? defaultWorkingHours : normalizeWorkingHours(workingHours);
+    let businessHours = business?.settings?.workingHours || {};
+    businessHours = Object.keys(businessHours).length === 0 ? defaultWorkingHours : normalizeWorkingHours(businessHours);
+
+    let workingHours = businessHours;
 
     // Use professional's working hours when professionalId provided and they have custom hours
+    // Professional hours are constrained by business: if business is closed on a day, no slots
     if (professionalId) {
       const proDoc = await db
         .collection('businesses')
@@ -76,7 +79,39 @@ export async function GET(request: NextRequest) {
         .get();
       const proData = proDoc.data();
       if (proData?.workingHours && Object.keys(proData.workingHours).length > 0) {
-        workingHours = normalizeWorkingHours(proData.workingHours);
+        const proHours = normalizeWorkingHours(proData.workingHours);
+        // Intersect: business closed => closed; both open => use pro hours but clip to business window
+        const merged: Record<string, { open: string; close: string; closed: boolean }> = {};
+        for (const day of Object.keys(defaultWorkingHours)) {
+          const b = businessHours[day];
+          const p = proHours[day];
+          if (b?.closed) {
+            merged[day] = { open: b.open, close: b.close, closed: true };
+          } else if (p?.closed) {
+            merged[day] = { open: b?.open ?? '09:00', close: b?.close ?? '18:00', closed: true };
+          } else {
+            const toMins = (h: string) => {
+              const [hh, mm] = h.split(':').map(Number);
+              return (hh || 0) * 60 + (mm || 0);
+            };
+            const bOpenMins = toMins(b?.open ?? '09:00');
+            const bCloseMins = toMins(b?.close ?? '18:00');
+            const pOpenMins = toMins(p?.open ?? '09:00');
+            const pCloseMins = toMins(p?.close ?? '18:00');
+            const effectiveOpen = Math.max(bOpenMins, pOpenMins);
+            const effectiveClose = Math.min(bCloseMins, pCloseMins);
+            if (effectiveOpen >= effectiveClose) {
+              merged[day] = { open: b?.open ?? '09:00', close: b?.close ?? '18:00', closed: true };
+            } else {
+              merged[day] = {
+                open: `${String(Math.floor(effectiveOpen / 60)).padStart(2, '0')}:${String(effectiveOpen % 60).padStart(2, '0')}`,
+                close: `${String(Math.floor(effectiveClose / 60)).padStart(2, '0')}:${String(effectiveClose % 60).padStart(2, '0')}`,
+                closed: false,
+              };
+            }
+          }
+        }
+        workingHours = merged;
       }
     }
 

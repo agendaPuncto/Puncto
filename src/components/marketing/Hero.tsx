@@ -130,12 +130,13 @@ export default function Hero() {
                 </div>
               </div>
               
-              <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 rounded-b-2xl aspect-[16/9] flex items-center justify-center shadow-2xl border border-slate-200 overflow-hidden">
+              <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-100 to-slate-200 rounded-b-2xl flex items-center justify-center shadow-2xl border border-slate-200 overflow-hidden">
                 <Image
                   src="/dashboardImage.png"
                   alt="Painel Administrativo Puncto - Gestão completa do seu negócio em um só lugar"
                   fill
-                  className="object-cover object-top"
+                  className="object-contain"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 90vw, 1280px"
                 />
               </div>
               

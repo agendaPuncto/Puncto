@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useProfessional } from '@/lib/contexts/ProfessionalContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useBookings } from '@/lib/queries/bookings';
+import { useBookings, useUpdateBooking } from '@/lib/queries/bookings';
 import { useProfessionals } from '@/lib/queries/professionals';
 import { BookingCalendar } from '@/components/admin/BookingCalendar';
+import { BookingStatus } from '@/types/booking';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NotificationsPreview } from '@/components/notifications/NotificationsPreview';
@@ -26,6 +28,7 @@ export default function ProfessionalDashboardPage() {
   const { data: bookings } = useBookings(business?.id ?? '', {
     professionalId: viewingProfessional?.id ?? undefined,
   });
+  const updateBooking = useUpdateBooking(business?.id ?? '');
 
   if (!professional) {
     return (
@@ -48,6 +51,12 @@ export default function ProfessionalDashboardPage() {
             Agendamentos de {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
           </p>
         </div>
+        <Link
+          href="/tenant/professional/bookings"
+          className="text-sm font-medium text-neutral-700 hover:text-neutral-900 underline"
+        >
+          Ver lista e gerenciar status →
+        </Link>
         {isOwnerProfessional && allProfessionals && allProfessionals.length > 1 && (
           <select
             value={selectedProId ?? professional.id}
@@ -68,7 +77,9 @@ export default function ProfessionalDashboardPage() {
       <BookingCalendar
         bookings={bookings ?? []}
         workingHours={viewingProfessional?.workingHours ?? business?.settings?.workingHours}
-        onStatusChange={async () => {}}
+        onStatusChange={async (bookingId, newStatus) => {
+          await updateBooking.mutateAsync({ bookingId, updates: { status: newStatus as BookingStatus } });
+        }}
       />
 
       {business?.id && user?.id && (

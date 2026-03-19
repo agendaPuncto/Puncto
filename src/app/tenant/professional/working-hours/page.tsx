@@ -33,12 +33,24 @@ export default function ProfessionalWorkingHoursPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const businessHours = business?.settings?.workingHours ?? {};
+  const isBusinessClosed = (day: keyof WorkingHours) =>
+    businessHours[day] && typeof businessHours[day] === 'object' && (businessHours[day] as { closed?: boolean }).closed === true;
+
   useEffect(() => {
     const wh = professional?.workingHours ?? business?.settings?.workingHours ?? {};
-    setWorkingHours({ ...DEFAULT_WH, ...wh } as WorkingHours);
+    const merged = { ...DEFAULT_WH, ...wh } as WorkingHours;
+    // For days the business is closed, force closed for professional
+    WEEKDAYS.forEach(({ key }) => {
+      if (isBusinessClosed(key)) {
+        merged[key] = { ...merged[key], open: merged[key]?.open ?? '09:00', close: merged[key]?.close ?? '18:00', closed: true };
+      }
+    });
+    setWorkingHours(merged);
   }, [professional?.workingHours, business?.settings?.workingHours]);
 
   const update = (day: keyof WorkingHours, field: string, value: string | boolean) => {
+    if (isBusinessClosed(day)) return; // cannot change days when business is closed
     setWorkingHours((prev) => ({
       ...prev,
       [day]: { ...prev[day], [field]: value },
@@ -53,12 +65,18 @@ export default function ProfessionalWorkingHoursPage() {
       setError('Dados não carregados. Recarregue a página e tente novamente.');
       return;
     }
+    const toSave: WorkingHours = { ...workingHours };
+    WEEKDAYS.forEach(({ key }) => {
+      if (isBusinessClosed(key)) {
+        toSave[key] = { open: toSave[key]?.open ?? '09:00', close: toSave[key]?.close ?? '18:00', closed: true };
+      }
+    });
     setSaving(true);
     try {
       const res = await fetch(`/api/professionals/${professional.id}?businessId=${business.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workingHours }),
+        body: JSON.stringify({ workingHours: toSave }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -90,38 +108,50 @@ export default function ProfessionalWorkingHoursPage() {
         </p>
       </div>
       <form onSubmit={handleSubmit} className="rounded-lg border border-neutral-200 bg-white p-6 max-w-lg">
+        <p className="text-sm text-neutral-600 mb-4">
+          Horários diferentes do estabelecimento são permitidos, mas dias em que o estabelecimento não abre ficam bloqueados.
+        </p>
         <div className="space-y-4">
-          {WEEKDAYS.map(({ key, label }) => (
-            <div key={key} className="flex flex-wrap items-center gap-4">
-              <span className="w-20 text-sm font-medium text-neutral-700">{label}</span>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={workingHours[key]?.closed ?? false}
-                  onChange={(e) => update(key, 'closed', e.target.checked)}
-                  className="rounded border-neutral-300"
-                />
-                <span className="text-sm text-neutral-600">Fechado</span>
-              </label>
-              {!workingHours[key]?.closed && (
-                <>
-                  <input
-                    type="time"
-                    value={workingHours[key]?.open || '09:00'}
-                    onChange={(e) => update(key, 'open', e.target.value)}
-                    className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-                  />
-                  <span className="text-neutral-400">até</span>
-                  <input
-                    type="time"
-                    value={workingHours[key]?.close || '18:00'}
-                    onChange={(e) => update(key, 'close', e.target.value)}
-                    className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-                  />
-                </>
-              )}
-            </div>
-          ))}
+          {WEEKDAYS.map(({ key, label }) => {
+            const businessClosed = isBusinessClosed(key);
+            return (
+              <div key={key} className={`flex flex-wrap items-center gap-4 ${businessClosed ? 'opacity-70' : ''}`}>
+                <span className="w-20 text-sm font-medium text-neutral-700">{label}</span>
+                {businessClosed ? (
+                  <span className="text-sm text-neutral-500">Fechado (estabelecimento não abre)</span>
+                ) : (
+                  <>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={workingHours[key]?.closed ?? false}
+                        onChange={(e) => update(key, 'closed', e.target.checked)}
+                        className="rounded border-neutral-300"
+                      />
+                      <span className="text-sm text-neutral-600">Fechado</span>
+                    </label>
+                    {!workingHours[key]?.closed && (
+                      <>
+                        <input
+                          type="time"
+                          value={workingHours[key]?.open || '09:00'}
+                          onChange={(e) => update(key, 'open', e.target.value)}
+                          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                        />
+                        <span className="text-neutral-400">até</span>
+                        <input
+                          type="time"
+                          value={workingHours[key]?.close || '18:00'}
+                          onChange={(e) => update(key, 'close', e.target.value)}
+                          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         {success && <p className="mt-4 text-sm text-green-600">Horários salvos com sucesso!</p>}

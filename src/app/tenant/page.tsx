@@ -9,7 +9,6 @@ import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/f
 import { Service, Professional } from '@/types';
 import { Product } from '@/types/restaurant';
 import { useAvailability } from '@/lib/hooks/useAvailability';
-import { AddToCalendar } from '@/components/booking/AddToCalendar';
 
 const money = (cents: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
@@ -168,6 +167,28 @@ export default function PublicBusinessPage() {
     }
     setSubmitting(true);
     try {
+      // Ensure customer exists in business (auto-register from booking form data)
+      let customerId: string | null = null;
+      try {
+        const ensureRes = await fetch('/api/customers/ensure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: business!.id,
+            firstName,
+            lastName,
+            phone,
+            email: email || user?.email || '',
+          }),
+        });
+        if (ensureRes.ok) {
+          const { customerId: cid } = await ensureRes.json();
+          customerId = cid || customerId;
+        }
+      } catch {
+        // Non-blocking: booking continues with customerData
+      }
+
       const bookingsRef = collection(db, 'businesses', business!.id, 'bookings');
       const docRef = await addDoc(bookingsRef, {
         businessId: business!.id,
@@ -181,7 +202,7 @@ export default function PublicBusinessPage() {
         scheduledDateTime: Timestamp.fromDate(new Date(`${selectedDate}T${selectedTime}`)),
         durationMinutes: currentService.durationMinutes,
         endDateTime: Timestamp.fromDate(new Date(new Date(`${selectedDate}T${selectedTime}`).getTime() + (currentService.durationMinutes || 60) * 60000)),
-        customerId: user?.id || null,
+        customerId,
         customerData: { firstName, lastName, phone, email: email || user?.email || '' },
         status: 'pending',
         price: currentService.price,
@@ -192,6 +213,18 @@ export default function PublicBusinessPage() {
         updatedAt: Timestamp.now(),
       });
       setCreatedId(docRef.id);
+
+      // Create in-app notifications (fallback when Cloud Functions aren't running)
+      try {
+        await fetch('/api/bookings/create-notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: business!.id, bookingId: docRef.id }),
+        });
+      } catch {
+        // Non-blocking: notifications may also be created by Cloud Function
+      }
+
       setStep(5);
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -563,7 +596,7 @@ export default function PublicBusinessPage() {
                     <div><label className="block text-xs font-medium text-stone-500 mb-1">Nome</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Seu nome" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div><label className="block text-xs font-medium text-stone-500 mb-1">Sobrenome</label><input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Sobrenome" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Telefone (WhatsApp)</label><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
-                    <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">E-mail (opcional — para confirmação)</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
+                    <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">E-mail (opcional)</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none" /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Observações (opcional)</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alergias, preferências..." rows={3} className="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent outline-none resize-none" /></div>
                   </div>
                   <div className="flex justify-between mt-6 pt-4 border-t border-stone-100">
@@ -595,9 +628,9 @@ export default function PublicBusinessPage() {
                 <div className="bg-white rounded-2xl border border-stone-200/80 p-8 shadow-sm text-center">
                   <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-2xl mx-auto mb-4">✓</div>
                   <h3 className="text-xl font-semibold text-stone-900 mb-2">Agendamento criado!</h3>
-                  <p className="text-stone-600 text-sm mb-6">Guarde o código da reserva: <span className="font-mono text-stone-900 font-medium">{createdId}</span>. {email || user?.email ? 'Enviaremos a confirmação por e-mail.' : 'Informe seu e-mail na próxima vez para receber confirmação.'}</p>
+                  <p className="text-stone-600 text-sm mb-6">Guarde o código da reserva: <span className="font-mono text-stone-900 font-medium">{createdId}</span>. {email || user?.email ? 'Enviaremos uma confirmação antes do seu agendamento.' : 'Informe seu e-mail na próxima vez para receber confirmação.'}</p>
                   <div className="flex flex-wrap justify-center gap-3">
-                    <AddToCalendar booking={{ id: createdId, businessId: business!.id, serviceId: currentService?.id || '', serviceName: currentService?.name || '', professionalId: currentPro?.id || '', professionalName: currentPro?.name || '', locationId: '', scheduledDate: selectedDate, scheduledTime: selectedTime || '', scheduledDateTime: new Date(`${selectedDate}T${selectedTime}`), durationMinutes: currentService?.durationMinutes || 60, endDateTime: new Date(`${selectedDate}T${selectedTime}`), customerData: { firstName, lastName, phone, email: email || user?.email }, status: 'pending', price: currentService?.price || 0, currency: 'BRL', reminders: {}, createdAt: new Date(), updatedAt: new Date() }} business={business!} />
+                    {/* <AddToCalendar booking={{ id: createdId, businessId: business!.id, serviceId: currentService?.id || '', serviceName: currentService?.name || '', professionalId: currentPro?.id || '', professionalName: currentPro?.name || '', locationId: '', scheduledDate: selectedDate, scheduledTime: selectedTime || '', scheduledDateTime: new Date(`${selectedDate}T${selectedTime}`), durationMinutes: currentService?.durationMinutes || 60, endDateTime: new Date(`${selectedDate}T${selectedTime}`), customerData: { firstName, lastName, phone, email: email || user?.email }, status: 'pending', price: currentService?.price || 0, currency: 'BRL', reminders: {}, createdAt: new Date(), updatedAt: new Date() }} business={business!} /> */}
                     <button onClick={resetBookingFlow} className="px-5 py-2.5 text-sm font-medium bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 transition-opacity">Fazer outro agendamento</button>
                     <a href="#" className="px-4 py-2.5 text-sm font-medium text-[var(--brand-secondary)] hover:underline">Ver meus agendamentos</a>
                   </div>
