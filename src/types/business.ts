@@ -123,6 +123,8 @@ export interface CancellationPolicy {
   refundPercent?: number; // Percentage to refund (0-100)
   fullRefundHours?: number; // Hours before service for full refund
   noRefundHours?: number; // Hours before service for no refund
+  /** Custom text shown when client clicks "política de cancelamento" link */
+  text?: string;
 }
 
 export type ConfirmationChannel = 'email' | 'whatsapp';

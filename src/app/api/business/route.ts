@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { displayName, phone, address, workingHours } = body;
+    const { displayName, phone, address, workingHours, cancellationPolicy } = body;
 
     const businessRef = db.collection('businesses').doc(businessId);
     const businessDoc = await businessRef.get();
@@ -49,6 +49,15 @@ export async function PATCH(request: NextRequest) {
       updates.settings = {
         ...current,
         workingHours,
+      };
+    }
+
+    if (cancellationPolicy !== undefined && typeof cancellationPolicy === 'object') {
+      const current = businessDoc.data()?.settings || {};
+      const currentPolicy = current.cancellationPolicy || {};
+      updates.settings = {
+        ...(updates.settings || current),
+        cancellationPolicy: { ...currentPolicy, ...cancellationPolicy },
       };
     }
 

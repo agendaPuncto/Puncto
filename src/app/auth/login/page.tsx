@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { auth } from '@/lib/firebase';
 
 function getRedirectUrl(
   user: { type?: string; primaryBusinessId?: string; businessId?: string; customClaims?: { primaryBusinessId?: string } } | null,
@@ -52,9 +53,28 @@ export default function LoginPage() {
     !returnUrlParam.startsWith('/tenant/admin') &&
     !returnUrlParam.startsWith('/admin');
 
+  /** Set __session cookie so middleware recognizes auth on full page load (prevents redirect loop) */
+  async function ensureSessionCookie(): Promise<void> {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    try {
+      const idToken = await firebaseUser.getIdToken(true);
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+        credentials: 'include',
+      });
+    } catch {
+      // Continue redirect even if session setup fails
+    }
+  }
+
   async function redirectToTenant(targetUrl: string, businessId: string) {
     if (hasRedirected.current) return;
     hasRedirected.current = true;
+
+    await ensureSessionCookie();
 
     try {
       await fetch('/api/tenant/set-context', {
@@ -134,12 +154,15 @@ export default function LoginPage() {
 
       if (businessId) {
         hasRedirected.current = true;
-        fetch('/api/tenant/set-context', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ businessId }),
-          credentials: 'include',
-        })
+        ensureSessionCookie()
+          .then(() =>
+            fetch('/api/tenant/set-context', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ businessId }),
+              credentials: 'include',
+            })
+          )
           .catch(() => {})
           .finally(() => {
             const isGestaoDomain = typeof window !== 'undefined' && window.location.hostname.includes('.gestao.');

@@ -54,6 +54,7 @@ export default function FinancialPage() {
       setAddForm({ type: 'expense', account: 'expenses', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
       queryClient.invalidateQueries({ queryKey: ['pnl', business.id] });
       queryClient.invalidateQueries({ queryKey: ['cashflow', business.id] });
+      queryClient.invalidateQueries({ queryKey: ['ledgerEntries', business.id] });
     } catch (err: any) {
       setAddError(err.message || 'Erro ao adicionar');
     } finally {
@@ -70,33 +71,53 @@ export default function FinancialPage() {
     return new Date().toISOString().split('T')[0];
   });
 
-  const { data: pnl, isLoading: pnlLoading } = useQuery({
-    queryKey: ['pnl', business.id, startDate, endDate],
+  const { data: pnl, isLoading: pnlLoading, isError: pnlError } = useQuery({
+    queryKey: ['pnl', business?.id, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId: business.id,
+        businessId: business!.id,
         startDate,
         endDate,
       });
       const response = await fetch(`/api/reports/pnl?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch P&L report');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Falha ao carregar P&L');
+      return data;
     },
+    enabled: !!business?.id,
   });
 
-  const { data: cashflow, isLoading: cashflowLoading } = useQuery({
-    queryKey: ['cashflow', business.id, startDate, endDate],
+  const { data: cashflow, isLoading: cashflowLoading, isError: cashflowError } = useQuery({
+    queryKey: ['cashflow', business?.id, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId: business.id,
+        businessId: business!.id,
         startDate,
         endDate,
         period: 'daily',
       });
       const response = await fetch(`/api/reports/cashflow?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch cash flow report');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Falha ao carregar fluxo de caixa');
+      return data;
     },
+    enabled: !!business?.id,
+  });
+
+  const { data: ledgerData, isLoading: entriesLoading, isError: entriesError } = useQuery({
+    queryKey: ['ledgerEntries', business?.id, startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        businessId: business!.id,
+        startDate,
+        endDate,
+      });
+      const response = await fetch(`/api/ledger/entries?${params}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Falha ao carregar ocorrências');
+      return data;
+    },
+    enabled: !!business?.id,
   });
 
   const formatAmount = (cents: number) => {
@@ -133,6 +154,55 @@ export default function FinancialPage() {
             className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           />
         </div>
+      </div>
+
+      {!business?.id && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
+          Carregando dados do negócio...
+        </div>
+      )}
+
+      {/* Registered occurrences list */}
+      <div className="rounded-lg border border-neutral-200 bg-white p-6">
+        <h2 className="text-lg font-semibold mb-4">Ocorrências registradas</h2>
+        {entriesLoading ? (
+          <div className="text-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
+          </div>
+        ) : entriesError ? (
+          <p className="text-red-600 py-4 text-sm">Erro ao carregar ocorrências. Verifique o console e as credenciais do Firebase.</p>
+        ) : ledgerData?.entries?.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                  <th className="py-2 pr-4">Data</th>
+                  <th className="py-2 pr-4">Tipo</th>
+                  <th className="py-2 pr-4">Descrição</th>
+                  <th className="py-2 text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerData.entries.map((entry: { id: string; type: string; description: string; amount: number; date: string }) => (
+                  <tr key={entry.id} className="border-b border-neutral-100">
+                    <td className="py-3 pr-4">{new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                    <td className="py-3 pr-4">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${entry.type === 'revenue' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {entry.type === 'revenue' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4">{entry.description}</td>
+                    <td className={`py-3 text-right font-medium ${entry.type === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
+                      {entry.type === 'revenue' ? '' : '-'}{formatAmount(entry.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-neutral-500 py-4">Nenhuma ocorrência no período selecionado. Clique em &quot;+ Adicionar ocorrência&quot; para registrar.</p>
+        )}
       </div>
 
       {showAddForm && (
@@ -212,6 +282,8 @@ export default function FinancialPage() {
           <div className="text-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
           </div>
+        ) : pnlError ? (
+          <p className="text-red-600 py-4 text-sm">Erro ao carregar P&L. Verifique se o negócio está correto e se as APIs estão acessíveis.</p>
         ) : pnl ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b">
@@ -240,7 +312,9 @@ export default function FinancialPage() {
               Margem de Lucro: {pnl.profitMargin.toFixed(2)}%
             </div>
           </div>
-        ) : null}
+        ) : !business?.id ? null : (
+          <p className="text-neutral-500 py-4 text-sm">Nenhum dado disponível para o período.</p>
+        )}
       </div>
 
       {/* Cash Flow Summary */}
@@ -251,6 +325,8 @@ export default function FinancialPage() {
           <div className="text-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
           </div>
+        ) : cashflowError ? (
+          <p className="text-red-600 py-4 text-sm">Erro ao carregar fluxo de caixa. Verifique se o negócio está correto e se as APIs estão acessíveis.</p>
         ) : cashflow?.summary ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b">
@@ -268,7 +344,9 @@ export default function FinancialPage() {
               </span>
             </div>
           </div>
-        ) : null}
+        ) : !business?.id ? null : (
+          <p className="text-neutral-500 py-4 text-sm">Nenhum dado disponível para o período.</p>
+        )}
       </div>
     </div>
   );
