@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { AnamnesisForm as AnamnesisFormType, AnamnesisFormField } from '@/types/anamnesis';
 import { printEmr } from '@/lib/utils/emrPrint';
+import { formatPhoneInput } from '@/lib/utils/phone';
 
 function normalizePhone(phone: string | undefined): string {
   if (!phone) return '';
@@ -439,7 +440,7 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
   const [formData, setFormData] = useState({
     firstName: customer.firstName,
     lastName: customer.lastName,
-    phone: customer.phone,
+    phone: formatPhoneInput(customer.phone || ''),
     email: customer.email || '',
     notes: customer.notes || '',
   });
@@ -447,7 +448,7 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
     setFormData({
       firstName: customer.firstName,
       lastName: customer.lastName,
-      phone: customer.phone,
+      phone: formatPhoneInput(customer.phone || ''),
       email: customer.email || '',
       notes: customer.notes || '',
     });
@@ -590,9 +591,12 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Telefone *</label>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={16}
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })}
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                  placeholder="(00) 00000-0000"
                   required
                 />
               </div>

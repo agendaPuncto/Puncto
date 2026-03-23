@@ -80,18 +80,23 @@ export async function GET(request: NextRequest) {
     });
 
     // Stripe refunds: collectionGroup('refunds') filtered in memory.
+    // Requires collection group index on refunds.businessId - wraps in try/catch if index missing
     let refunds = 0;
-    const refundsSnapshot = await db
-      .collectionGroup('refunds')
-      .where('businessId', '==', businessId)
-      .get();
-    refundsSnapshot.forEach((doc) => {
-      const data = doc.data() as any;
-      if (data.status !== 'succeeded') return;
-      const createdAtMs = toMillis(data.createdAt);
-      if (!inRange(createdAtMs)) return;
-      refunds += data.amount || 0;
-    });
+    try {
+      const refundsSnapshot = await db
+        .collectionGroup('refunds')
+        .where('businessId', '==', businessId)
+        .get();
+      refundsSnapshot.forEach((doc) => {
+        const data = doc.data() as any;
+        if (data.status !== 'succeeded') return;
+        const createdAtMs = toMillis(data.createdAt);
+        if (!inRange(createdAtMs)) return;
+        refunds += data.amount || 0;
+      });
+    } catch (refundsErr) {
+      console.warn('[pnl-report] Skipping refunds collectionGroup query (index may be missing):', (refundsErr as Error)?.message);
+    }
 
     // Manual refunds (if any)
     const manualRefundsSnapshot = await ledgerRef.where('account', '==', 'refunds').get();

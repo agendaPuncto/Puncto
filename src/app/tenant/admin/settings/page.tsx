@@ -168,6 +168,8 @@ function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: ()
   const addr = business?.address || {};
   const wh = business?.settings?.workingHours || DEFAULT_WORKING_HOURS;
 
+  const cp = business?.settings?.cancellationPolicy || {};
+
   const [formData, setFormData] = useState({
     displayName: business?.displayName || '',
     phone: business?.phone || '',
@@ -179,11 +181,13 @@ function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: ()
     state: addr.state || '',
     zipCode: addr.zipCode || '',
     workingHours: { ...DEFAULT_WORKING_HOURS, ...wh } as typeof DEFAULT_WORKING_HOURS,
+    cancellationPolicyText: cp.text || '',
   });
 
   useEffect(() => {
     const a = business?.address || {};
     const w = business?.settings?.workingHours || {};
+    const c = business?.settings?.cancellationPolicy || {};
     setFormData({
       displayName: business?.displayName || '',
       phone: business?.phone || '',
@@ -195,8 +199,9 @@ function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: ()
       state: a.state || '',
       zipCode: a.zipCode || '',
       workingHours: { ...DEFAULT_WORKING_HOURS, ...w } as typeof DEFAULT_WORKING_HOURS,
+      cancellationPolicyText: c.text || '',
     });
-  }, [business?.id, business?.displayName, business?.phone, business?.address, business?.settings?.workingHours]);
+  }, [business?.id, business?.displayName, business?.phone, business?.address, business?.settings?.workingHours, business?.settings?.cancellationPolicy]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -217,6 +222,7 @@ function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: ()
             country: addr.country || 'BR',
           },
           workingHours: data.workingHours,
+          cancellationPolicy: { ...cp, text: data.cancellationPolicyText },
         }),
       });
       if (!res.ok) {
@@ -416,6 +422,20 @@ function GeneralSettings({ business, onSuccess }: { business: any; onSuccess: ()
               </div>
             ))}
           </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium text-neutral-700 mb-3">Política de cancelamento</h3>
+          <p className="text-xs text-neutral-500 mb-2">
+            Este texto será exibido quando o cliente clicar no link &quot;política de cancelamento&quot; na etapa de confirmação do agendamento.
+          </p>
+          <textarea
+            value={formData.cancellationPolicyText}
+            onChange={(e) => setFormData({ ...formData, cancellationPolicyText: e.target.value })}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 min-h-[120px]"
+            placeholder="Ex.: O cancelamento pode ser feito até 24 horas antes do horário agendado sem custos. Cancelamentos com menos de 24 horas de antecedência podem estar sujeitos a taxa."
+            rows={4}
+          />
         </div>
 
         {saveMutation.isError && (

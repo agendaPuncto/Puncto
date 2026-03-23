@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
     const inflows: Record<string, number> = {};
     const outflows: Record<string, number> = {};
 
+    // Cash account movements
     const cashLedgerSnapshot = await ledgerRef
       .where('account', '==', 'cash')
       .get();
@@ -73,6 +74,34 @@ export async function GET(request: NextRequest) {
       } else if (data.type === 'credit') {
         outflows[key] = (outflows[key] || 0) + (data.amount || 0);
       }
+    });
+
+    // Manual revenue (credit) = cash inflow, manual expenses (debit) = cash outflow
+    const [revenueSnapshot, expensesSnapshot] = await Promise.all([
+      ledgerRef.where('account', '==', 'revenue').get(),
+      ledgerRef.where('account', '==', 'expenses').get(),
+    ]);
+
+    revenueSnapshot.forEach((doc) => {
+      const data = doc.data() as any;
+      if (data.type !== 'credit') return;
+      const dateMs = toMillis(data.date);
+      if (!inRange(dateMs)) return;
+      const date = dateMs !== null ? new Date(dateMs) : null;
+      if (!date) return;
+      const key = periodKeyForDate(date);
+      inflows[key] = (inflows[key] || 0) + (data.amount || 0);
+    });
+
+    expensesSnapshot.forEach((doc) => {
+      const data = doc.data() as any;
+      if (data.type !== 'debit') return;
+      const dateMs = toMillis(data.date);
+      if (!inRange(dateMs)) return;
+      const date = dateMs !== null ? new Date(dateMs) : null;
+      if (!date) return;
+      const key = periodKeyForDate(date);
+      outflows[key] = (outflows[key] || 0) + (data.amount || 0);
     });
 
     // Stripe-derived movements: do simple queries and filter by date in memory.
@@ -114,11 +143,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Refunds succeeded => cash outflow
-    const refundsSnapshot = await db
-      .collectionGroup('refunds')
-      .where('businessId', '==', businessId)
-      .get();
-    refundsSnapshot.forEach((doc) => {
+    // Requires collection group index on refunds.businessId - wraps in try/catch if index missing
+    try {
+      const refundsSnapshot = await db
+        .collectionGroup('refunds')
+        .where('businessId', '==', businessId)
+        .get();
+      refundsSnapshot.forEach((doc) => {
       const data = doc.data() as any;
       if (data.status !== 'succeeded') return;
       const createdAtMs = toMillis(data.createdAt);
@@ -128,6 +159,9 @@ export async function GET(request: NextRequest) {
       const key = periodKeyForDate(date);
       derivedOutflows[key] = (derivedOutflows[key] || 0) + (data.amount || 0);
     });
+    } catch (refundsErr) {
+      console.warn('[cashflow-report] Skipping refunds collectionGroup query (index may be missing):', (refundsErr as Error)?.message);
+    }
 
     const allPeriods = new Set([
       ...Object.keys(inflows),

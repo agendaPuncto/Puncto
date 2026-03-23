@@ -7,6 +7,7 @@ import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
 import { Customer } from '@/types/booking';
 import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
 import { AnamnesisFormsSection } from '@/components/admin/AnamnesisFormsSection';
+import { formatPhoneInput } from '@/lib/utils/phone';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
@@ -229,10 +230,12 @@ export default function AdminCustomersPage() {
               <label className="block text-sm font-medium text-neutral-700 mb-1">Telefone *</label>
               <input
                 type="tel"
+                inputMode="numeric"
+                maxLength={16}
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                placeholder="(11) 99999-9999"
+                placeholder="(00) 00000-0000"
                 required
               />
             </div>

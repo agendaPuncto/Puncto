@@ -71,6 +71,7 @@ export default function PublicBusinessPage() {
   const [step, setStep] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -616,7 +617,24 @@ export default function PublicBusinessPage() {
                     <div className="flex justify-between"><dt className="text-stone-500">Horário</dt><dd className="font-medium">{selectedTime}</dd></div>
                     <div className="flex justify-between pt-2 border-t border-stone-100"><dt className="text-stone-500">Valor</dt><dd className="font-semibold text-stone-900">{currentService ? money(currentService.price) : '—'}</dd></div>
                   </dl>
-                  <p className="mt-4 text-xs text-stone-500">Ao confirmar, você concorda com a <a href="#" className="text-[var(--brand-secondary)] hover:underline">política de cancelamento</a> do estabelecimento.</p>
+                  <p className="mt-4 text-xs text-stone-500">Ao confirmar, você concorda com a{' '}
+                    <button type="button" onClick={() => setShowCancellationPolicy(true)} className="text-[var(--brand-secondary)] hover:underline">
+                      política de cancelamento
+                    </button>
+                    {' '}do estabelecimento.</p>
+                  {showCancellationPolicy && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCancellationPolicy(false)}>
+                      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <h4 className="text-lg font-semibold text-stone-900 mb-3">Política de cancelamento</h4>
+                        <p className="text-sm text-stone-600 whitespace-pre-wrap">
+                          {business?.settings?.cancellationPolicy?.text?.trim() || 'O estabelecimento ainda não definiu uma política de cancelamento.'}
+                        </p>
+                        <button type="button" onClick={() => setShowCancellationPolicy(false)} className="mt-4 w-full py-2 text-sm font-medium bg-stone-900 text-white rounded-lg hover:bg-stone-800">
+                          Fechar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex justify-between mt-6 pt-4 border-t border-stone-100">
                     <button onClick={onBack} className="px-4 py-2.5 text-sm font-medium text-stone-600 hover:text-stone-900">Voltar</button>
                     <button onClick={submitBooking} disabled={submitting} className="px-6 py-2.5 text-sm font-medium bg-[var(--brand-primary)] text-white rounded-xl hover:opacity-90 disabled:opacity-70 transition-opacity">{submitting ? 'Enviando...' : 'Confirmar agendamento'}</button>
