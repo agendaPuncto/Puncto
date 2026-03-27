@@ -12,6 +12,7 @@ import { formatPhoneInput } from '@/lib/utils/phone';
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
   const isClinic = business?.industry === 'clinic';
+  const isEducation = business?.industry === 'education';
   const { data: customers = [], isLoading } = useCustomers(business.id);
   const createCustomer = useCreateCustomer(business.id);
   const [activeSection, setActiveSection] = useState<'patients' | 'anamnese'>('patients');
@@ -28,18 +29,33 @@ export default function AdminCustomersPage() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  const patientLabel = isClinic ? 'Paciente' : 'Cliente';
-  const patientsLabel = isClinic ? 'Pacientes' : 'Clientes';
-  const registerLabel = isClinic ? 'Cadastrar paciente' : 'Cadastrar cliente';
-  const newPatientLabel = isClinic ? 'Novo paciente' : 'Novo cliente';
-  const notesPlaceholder = isClinic ? 'Anotações sobre o paciente' : 'Anotações sobre o cliente';
+  const patientsLabel = isClinic ? 'Pacientes' : isEducation ? 'Alunos' : 'Clientes';
+  const registerLabel = isClinic
+    ? 'Cadastrar paciente'
+    : isEducation
+      ? 'Cadastrar aluno'
+      : 'Cadastrar cliente';
+  const newPatientLabel = isClinic ? 'Novo paciente' : isEducation ? 'Novo aluno' : 'Novo cliente';
+  const notesPlaceholder = isClinic
+    ? 'Anotações sobre o paciente'
+    : isEducation
+      ? 'Anotações sobre o aluno'
+      : 'Anotações sobre o cliente';
   const emptySearch = isClinic
     ? 'Nenhum paciente encontrado com os filtros aplicados.'
-    : 'Nenhum cliente encontrado com os filtros aplicados.';
+    : isEducation
+      ? 'Nenhum aluno encontrado com os filtros aplicados.'
+      : 'Nenhum cliente encontrado com os filtros aplicados.';
   const emptyList = isClinic
     ? 'Nenhum paciente cadastrado. Clique em "Cadastrar paciente" para adicionar.'
-    : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.';
-  const errorCreate = isClinic ? 'Erro ao cadastrar paciente' : 'Erro ao cadastrar cliente';
+    : isEducation
+      ? 'Nenhum aluno cadastrado. Clique em "Cadastrar aluno" para adicionar.'
+      : 'Nenhum cliente cadastrado. Clique em "Cadastrar cliente" para adicionar.';
+  const errorCreate = isClinic
+    ? 'Erro ao cadastrar paciente'
+    : isEducation
+      ? 'Erro ao cadastrar aluno'
+      : 'Erro ao cadastrar cliente';
 
   const searchParams = useSearchParams();
   const customerIdFromUrl = searchParams?.get('customerId') ?? null;
@@ -126,7 +142,11 @@ export default function AdminCustomersPage() {
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">{patientsLabel}</h1>
           <p className="text-neutral-600 mt-2">
-            {isClinic ? 'Base de dados de pacientes e prontuários' : 'Base de dados de clientes'}
+            {isClinic
+              ? 'Base de dados de pacientes e prontuários'
+              : isEducation
+                ? 'Base de dados de alunos'
+                : 'Base de dados de clientes'}
           </p>
         </div>
         {activeSection === 'patients' && (
@@ -330,6 +350,7 @@ export default function AdminCustomersPage() {
           businessId={business.id}
           onClose={() => setSelectedCustomer(null)}
           isClinic={isClinic}
+          isEducation={isEducation}
         />
       )}
         </>

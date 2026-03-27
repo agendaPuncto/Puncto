@@ -419,9 +419,18 @@ interface CustomerDetailModalProps {
   businessId: string;
   onClose: () => void;
   isClinic?: boolean;
+  /** Educação: textos no singular (aluno) no histórico e mensagens. */
+  isEducation?: boolean;
 }
 
-export function CustomerDetailModal({ customer, businessId, onClose, isClinic = false }: CustomerDetailModalProps) {
+export function CustomerDetailModal({
+  customer,
+  businessId,
+  onClose,
+  isClinic = false,
+  isEducation = false,
+}: CustomerDetailModalProps) {
+  const personLabelSingular = isClinic ? 'paciente' : isEducation ? 'aluno' : 'cliente';
   const { user } = useAuth();
   const { data: allBookings = [] } = useBookings(businessId);
   const updateCustomer = useUpdateCustomer(businessId);
@@ -657,7 +666,9 @@ export function CustomerDetailModal({ customer, businessId, onClose, isClinic = 
           {activeTab === 'records' && (
             <div className="space-y-3">
               {customerBookings.length === 0 ? (
-                <p className="text-neutral-500 text-sm">Nenhum agendamento encontrado para este paciente.</p>
+                <p className="text-neutral-500 text-sm">
+                  Nenhum agendamento encontrado para este {personLabelSingular}.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {customerBookings.map((booking) => {

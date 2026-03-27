@@ -119,6 +119,14 @@ service cloud.firestore {
                        isPlatformAdmin();
       }
 
+      // Educação: turmas e vínculo com alunos (customer IDs)
+      match /turmas/{turmaId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+      }
+
       // Clinic: anamnese forms and responses (prontuário)
       match /anamnesis_forms/{formId} {
         allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
