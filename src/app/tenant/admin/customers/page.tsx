@@ -2,21 +2,27 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { ensureStudentTuitionSubscription } from '@/lib/student/ensureTuitionSubscription';
 import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
+import { useTuitionTypes } from '@/lib/queries/tuitionTypes';
 import { Customer } from '@/types/booking';
 import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
+import { StudentEducationDetailModal } from '@/components/admin/StudentEducationDetailModal';
 import { AnamnesisFormsSection } from '@/components/admin/AnamnesisFormsSection';
 import { formatPhoneInput } from '@/lib/utils/phone';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
+  const queryClient = useQueryClient();
   const { firebaseUser } = useAuth();
   const isClinic = business?.industry === 'clinic';
   const isEducation = business?.industry === 'education';
   const { data: customers = [], isLoading } = useCustomers(business.id);
   const createCustomer = useCreateCustomer(business.id);
+  const { data: tuitionTypes = [] } = useTuitionTypes(business.id, isEducation);
   const [activeSection, setActiveSection] = useState<'patients' | 'anamnese'>('patients');
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -29,10 +35,11 @@ export default function AdminCustomersPage() {
     email: '',
     birthDate: '',
     notes: '',
+    tuitionTypeId: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [accessLoadingId, setAccessLoadingId] = useState<string | null>(null);
-  const [subscriptionLoadingId, setSubscriptionLoadingId] = useState<string | null>(null);
+  const [educationDetailCustomer, setEducationDetailCustomer] = useState<Customer | null>(null);
 
   const patientsLabel = isClinic ? 'Pacientes' : isEducation ? 'Alunos' : 'Clientes';
   const registerLabel = isClinic
@@ -119,16 +126,38 @@ export default function AdminCustomersPage() {
       return;
     }
     try {
-      await createCustomer.mutateAsync({
+      const created = await createCustomer.mutateAsync({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim() || undefined,
         birthDate: formData.birthDate || undefined,
         notes: formData.notes.trim() || undefined,
+        ...(isEducation && formData.tuitionTypeId ? { tuitionTypeId: formData.tuitionTypeId } : {}),
       });
+
+      if (
+        isEducation &&
+        created.tuitionTypeId &&
+        typeof created.email === 'string' &&
+        created.email.trim() &&
+        firebaseUser
+      ) {
+        const tuitionResult = await ensureStudentTuitionSubscription(() => firebaseUser.getIdToken(), {
+          businessId: business.id,
+          customerId: created.id,
+        });
+        if (tuitionResult.ok && tuitionResult.created) {
+          await queryClient.invalidateQueries({ queryKey: ['studentSubscriptions', 'admin', business.id] });
+        } else if (!tuitionResult.ok) {
+          window.alert(
+            `Aluno cadastrado. Não foi possível preparar a mensalidade no portal:\n\n${tuitionResult.error}\n\nConfira o valor sugerido (R$) no tipo em Pagamentos e o Stripe.`,
+          );
+        }
+      }
+
       setShowForm(false);
-      setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '', notes: '' });
+      setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '', notes: '', tuitionTypeId: '' });
     } catch (err: any) {
       setError(err.message || errorCreate);
     }
@@ -151,41 +180,21 @@ export default function AdminCustomersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Falha ao criar acesso');
-      alert(`Acesso criado. Senha temporaria: ${data.temporaryPassword}`);
+      if (data.emailSent) {
+        window.alert(
+          `Convite enviado para ${customer.email}.\n\nA senha inicial é a data de nascimento no formato DDMMAAAA (ex.: ${data.temporaryPassword}).\n\nPeça ao aluno a verificar a caixa de entrada e o spam.`,
+        );
+      } else {
+        window.alert(
+          `Acesso criado. Senha inicial (DDMMAAAA): ${data.temporaryPassword}\n\n${
+            data.loginUrl ? `Login do aluno: ${data.loginUrl}\n\n` : ''
+          }O e-mail automático não foi enviado — configure o provedor de e-mail (ZeptoMail ou Resend) no servidor ou repasse os dados manualmente.`,
+        );
+      }
     } catch (err: any) {
       alert(err?.message || 'Erro ao criar acesso');
     } finally {
       setAccessLoadingId(null);
-    }
-  };
-
-  const handleCreateSubscription = async (customer: Customer) => {
-    if (!firebaseUser) return;
-    const amountStr = prompt('Valor da mensalidade (em R$, ex: 299.90):', '299.90');
-    if (!amountStr) return;
-    const cents = Math.round(Number(amountStr.replace(',', '.')) * 100);
-    if (!Number.isFinite(cents) || cents <= 0) return;
-    setSubscriptionLoadingId(customer.id);
-    try {
-      const token = await firebaseUser.getIdToken();
-      const res = await fetch('/api/students/subscriptions/manage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          action: 'create',
-          businessId: business.id,
-          customerId: customer.id,
-          amount: cents,
-          currency: 'brl',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Falha ao criar mensalidade');
-      if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank');
-    } catch (err: any) {
-      alert(err?.message || 'Erro ao criar mensalidade');
-    } finally {
-      setSubscriptionLoadingId(null);
     }
   };
 
@@ -349,6 +358,26 @@ export default function AdminCustomersPage() {
                 rows={2}
               />
             </div>
+            {isEducation && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de mensalidade</label>
+                <select
+                  value={formData.tuitionTypeId}
+                  onChange={(e) => setFormData({ ...formData, tuitionTypeId: e.target.value })}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                >
+                  <option value="">Nenhum</option>
+                  {tuitionTypes.map((tt) => (
+                    <option key={tt.id} value={tt.id}>
+                      {tt.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Com e-mail e valor sugerido no tipo (Pagamentos), a mensalidade é preparada no portal ao cadastrar.
+                </p>
+              </div>
+            )}
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
               <button
@@ -414,7 +443,18 @@ export default function AdminCustomersPage() {
                             e.stopPropagation();
                             handleCreateStudentAccess(customer);
                           }}
-                          disabled={!customer.email || accessLoadingId === customer.id}
+                          disabled={
+                            !customer.email ||
+                            !customer.birthDate ||
+                            accessLoadingId === customer.id
+                          }
+                          title={
+                            !customer.email
+                              ? 'Cadastre o e-mail do aluno'
+                              : !customer.birthDate
+                                ? 'Informe a data de nascimento (a senha inicial será DDMMAAAA)'
+                                : undefined
+                          }
                           className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                         >
                           Acesso
@@ -423,12 +463,11 @@ export default function AdminCustomersPage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleCreateSubscription(customer);
+                            setEducationDetailCustomer(customer);
                           }}
-                          disabled={subscriptionLoadingId === customer.id}
-                          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+                          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
                         >
-                          Mensalidade
+                          Detalhes
                         </button>
                       </div>
                     </td>
@@ -444,6 +483,14 @@ export default function AdminCustomersPage() {
           )}
         </div>
       </div>
+
+      {educationDetailCustomer && (
+        <StudentEducationDetailModal
+          customer={educationDetailCustomer}
+          businessId={business.id}
+          onClose={() => setEducationDetailCustomer(null)}
+        />
+      )}
 
       {selectedCustomer && business && (
         <CustomerDetailModal

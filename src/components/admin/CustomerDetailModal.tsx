@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Customer } from '@/types/booking';
 import { useBookings } from '@/lib/queries/bookings';
 import { useUpdateCustomer } from '@/lib/queries/customers';
+import { useTuitionTypes } from '@/lib/queries/tuitionTypes';
 import {
   useAnamnesisForms,
   useAnamnesisResponsesForPatient,
@@ -12,6 +14,7 @@ import {
 import { useEmrsForPatient } from '@/lib/queries/emr';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { ensureStudentTuitionSubscription } from '@/lib/student/ensureTuitionSubscription';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { AnamnesisForm as AnamnesisFormType, AnamnesisFormField } from '@/types/anamnesis';
@@ -431,9 +434,11 @@ export function CustomerDetailModal({
   isEducation = false,
 }: CustomerDetailModalProps) {
   const personLabelSingular = isClinic ? 'paciente' : isEducation ? 'aluno' : 'cliente';
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
+  const queryClient = useQueryClient();
   const { data: allBookings = [] } = useBookings(businessId);
   const updateCustomer = useUpdateCustomer(businessId);
+  const { data: tuitionTypes = [] } = useTuitionTypes(businessId, Boolean(isEducation));
   const { data: anamnesisForms = [] } = useAnamnesisForms(businessId);
   const { data: anamnesisResponses = [], isLoading: loadingResponses } = useAnamnesisResponsesForPatient(
     businessId,
@@ -453,6 +458,7 @@ export function CustomerDetailModal({
     email: customer.email || '',
     birthDate: customer.birthDate || '',
     notes: customer.notes || '',
+    tuitionTypeId: customer.tuitionTypeId || '',
   });
   useEffect(() => {
     setFormData({
@@ -462,8 +468,18 @@ export function CustomerDetailModal({
       email: customer.email || '',
       birthDate: customer.birthDate || '',
       notes: customer.notes || '',
+      tuitionTypeId: customer.tuitionTypeId || '',
     });
-  }, [customer.id, customer.firstName, customer.lastName, customer.phone, customer.email, customer.birthDate, customer.notes]);
+  }, [
+    customer.id,
+    customer.firstName,
+    customer.lastName,
+    customer.phone,
+    customer.email,
+    customer.birthDate,
+    customer.notes,
+    customer.tuitionTypeId,
+  ]);
   const [error, setError] = useState<string | null>(null);
 
   const customerPhoneNorm = normalizePhone(customer.phone);
@@ -502,8 +518,26 @@ export function CustomerDetailModal({
           email: formData.email.trim() || undefined,
           notes: formData.notes.trim() || undefined,
           birthDate: formData.birthDate || undefined,
+          ...(isEducation ? { tuitionTypeId: formData.tuitionTypeId.trim() } : {}),
         },
       });
+
+      if (isEducation && formData.tuitionTypeId.trim() && formData.email.trim() && firebaseUser) {
+        const tuitionResult = await ensureStudentTuitionSubscription(() => firebaseUser.getIdToken(), {
+          businessId,
+          customerId: customer.id,
+        });
+        if (tuitionResult.ok && tuitionResult.created) {
+          await queryClient.invalidateQueries({ queryKey: ['studentSubscriptions', 'admin', businessId] });
+          await queryClient.invalidateQueries({
+            queryKey: ['customerEducationOverview', businessId, customer.id],
+          });
+        } else if (!tuitionResult.ok) {
+          window.alert(
+            `Dados salvos. Não foi possível preparar a mensalidade no portal do aluno:\n\n${tuitionResult.error}\n\nConfira o valor sugerido (R$) no tipo em Pagamentos e se o Stripe está conectado.`,
+          );
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar');
     }
@@ -639,6 +673,27 @@ export function CustomerDetailModal({
                   rows={3}
                 />
               </div>
+              {isEducation && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de mensalidade</label>
+                  <select
+                    value={formData.tuitionTypeId}
+                    onChange={(e) => setFormData({ ...formData, tuitionTypeId: e.target.value })}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">Nenhum</option>
+                    {tuitionTypes.map((tt) => (
+                      <option key={tt.id} value={tt.id}>
+                        {tt.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    O aluno precisa de e-mail. Com tipo e valor sugerido (R$) no tipo, ao salvar abrimos a mensalidade
+                    no portal para ele pagar e ativar a recorrência. Tipos em Pagamentos.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center gap-4 text-sm text-neutral-600">
                 <span>Agendamentos: {customer.totalBookings}</span>
                 <span>Total gasto: {money(customer.totalSpent || 0)}</span>

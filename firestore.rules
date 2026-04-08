@@ -203,6 +203,20 @@ service cloud.firestore {
                        isPlatformAdmin();
       }
 
+      // Educação: tipos de mensalidade (planos)
+      // Escrita: dono, gestor (claim manager) ou permissão manageBookings no staff — evita bloquear gestores sem doc staff.
+      match /tuitionTypes/{tuitionTypeId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        // Alunos veem o catálogo da própria escola (nome/valor sugerido) para o fluxo de mensalidade no portal.
+        allow read: if isStudentOfBusiness(businessId);
+        allow write: if isPlatformAdmin() ||
+                       isBusinessOwner(businessId) ||
+                       (isBusinessUser() &&
+                         request.auth.token.businessRoles != null &&
+                         request.auth.token.businessRoles[businessId] == 'manager') ||
+                       hasPermission(businessId, 'manageBookings');
+      }
+
       match /ledgerEntries/{entryId} {
         allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
         allow write: if isBusinessOwner(businessId) ||

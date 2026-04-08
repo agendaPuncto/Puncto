@@ -96,6 +96,8 @@ export interface Customer {
   studentUserId?: string;
   studentAccessEnabled?: boolean;
   stripeCustomerId?: string;
+  /** Tipo de mensalidade padrão (tuitionTypes/{id}) — educação */
+  tuitionTypeId?: string;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
 }

@@ -6,6 +6,7 @@ import {
   updateDoc,
   doc,
   Timestamp,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Customer } from '@/types/booking';
@@ -55,6 +56,7 @@ export function useCreateCustomer(businessId: string) {
       email?: string;
       birthDate?: string;
       notes?: string;
+      tuitionTypeId?: string;
     }) => {
       const customersRef = collection(db, 'businesses', businessId, 'customers');
       const now = Timestamp.now();
@@ -70,6 +72,7 @@ export function useCreateCustomer(businessId: string) {
         totalSpent: 0,
         consentGiven: true,
         notes: customerData.notes?.trim() || '',
+        ...(customerData.tuitionTypeId ? { tuitionTypeId: customerData.tuitionTypeId } : {}),
         createdAt: now,
         updatedAt: now,
       };
@@ -101,7 +104,11 @@ export function useUpdateCustomer(businessId: string) {
       // Firestore does not accept `undefined` values in update payloads.
       const sanitizedUpdates = Object.fromEntries(
         Object.entries(updates).filter(([, value]) => value !== undefined),
-      );
+      ) as Record<string, unknown>;
+
+      if ('tuitionTypeId' in sanitizedUpdates && sanitizedUpdates.tuitionTypeId === '') {
+        sanitizedUpdates.tuitionTypeId = deleteField();
+      }
 
       await updateDoc(customerRef, {
         ...sanitizedUpdates,

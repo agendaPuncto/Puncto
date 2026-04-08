@@ -2,13 +2,14 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { getStudentCustomerId } from '@/lib/student/studentSession';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useStudentAttendance, useStudentTurmas } from '@/lib/queries/studentPortal';
 
 export default function StudentFaltasPage() {
   const { user } = useAuth();
   const { business } = useBusiness();
-  const studentCustomerId = user?.customClaims?.studentCustomerId;
+  const studentCustomerId = getStudentCustomerId(user);
   const { data: attendance = [], isLoading } = useStudentAttendance(business.id, studentCustomerId);
   const { data: turmas = [] } = useStudentTurmas(business.id, studentCustomerId);
 
