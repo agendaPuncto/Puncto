@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useCustomers } from '@/lib/queries/customers';
+import { useProfessionals } from '@/lib/queries/professionals';
 import { useAttendanceRollCallsRange } from '@/lib/queries/attendance';
 import {
   useTurmas,
@@ -41,9 +43,12 @@ function pct(part: number, total: number) {
 export default function AdminTurmasPage() {
   const { business } = useBusiness();
   const isEducation = business?.industry === 'education';
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { data: turmas = [], isLoading: loadingTurmas } = useTurmas(business?.id ?? '');
   const { data: customers = [], isLoading: loadingCustomers } = useCustomers(business?.id ?? '');
+  const { data: professionals = [] } = useProfessionals(business?.id ?? '', { active: true });
   const createTurma = useCreateTurma(business?.id ?? '');
   const updateTurma = useUpdateTurma(business?.id ?? '');
   const deleteTurma = useDeleteTurma(business?.id ?? '');
@@ -83,6 +88,22 @@ export default function AdminTurmasPage() {
   );
 
   const loading = loadingTurmas || loadingCustomers;
+
+  const professionalById = useMemo(() => {
+    const m = new Map(professionals.map((p) => [p.id, p]));
+    return m;
+  }, [professionals]);
+
+  useEffect(() => {
+    if (!isEducation) return;
+    const tid = searchParams.get('t') || searchParams.get('turmaId');
+    if (!tid || turmas.length === 0) return;
+    const found = turmas.find((x) => x.id === tid);
+    if (!found) return;
+    setManageTurma(found);
+    setAddStudentId('');
+    router.replace('/tenant/admin/turmas', { scroll: false });
+  }, [isEducation, searchParams, turmas, router]);
 
   const reportByTurma = useMemo(() => {
     const byTurma = new Map<
@@ -367,6 +388,18 @@ export default function AdminTurmasPage() {
     setManageTurma((t) => (t ? { ...t, schedules: next } : null));
   };
 
+  const assignTurmaProfessor = async (professionalId: string) => {
+    if (!manageTurma) return;
+    const trimmed = professionalId.trim();
+    await updateTurma.mutateAsync({
+      turmaId: manageTurma.id,
+      updates: { professionalId: trimmed },
+    });
+    setManageTurma((t) =>
+      t ? { ...t, professionalId: trimmed || undefined } : null,
+    );
+  };
+
   const handleDeleteTurma = async (t: Turma) => {
     if (!confirm(`Excluir a turma "${t.name}"? Os alunos não serão excluídos do sistema.`)) return;
     await deleteTurma.mutateAsync(t.id);
@@ -587,6 +620,16 @@ export default function AdminTurmasPage() {
               <p className="mt-1 text-sm text-neutral-500">
                 {t.schedules?.length || 0} horário{(t.schedules?.length || 0) === 1 ? '' : 's'}
               </p>
+              {t.professionalId ? (
+                <p className="mt-2 text-sm text-neutral-600">
+                  Professor:{' '}
+                  <span className="font-medium text-neutral-800">
+                    {professionalById.get(t.professionalId)?.name || '—'}
+                  </span>
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-neutral-500">Sem professor vinculado</p>
+              )}
               {t.schedules?.length ? (
                 <ul className="mt-2 space-y-1 text-xs text-neutral-600">
                   {t.schedules.slice(0, 2).map((slot, idx) => (
@@ -757,6 +800,26 @@ export default function AdminTurmasPage() {
             <p className="mt-1 text-sm text-neutral-600">
               Gerencie dias/horários e os alunos vinculados à turma.
             </p>
+
+            <div className="mt-4 rounded-lg border border-neutral-200 p-3">
+              <label htmlFor="turma-professor" className="text-sm font-medium text-neutral-700">
+                Professor(a)
+              </label>
+              <select
+                id="turma-professor"
+                value={manageTurma.professionalId || ''}
+                onChange={(e) => assignTurmaProfessor(e.target.value)}
+                disabled={updateTurma.isPending}
+                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 disabled:opacity-50"
+              >
+                <option value="">Nenhum</option>
+                {professionals.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="mt-4 rounded-lg border border-neutral-200 p-3">
               <p className="text-sm font-medium text-neutral-700">Dias e horários</p>

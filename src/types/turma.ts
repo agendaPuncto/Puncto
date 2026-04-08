@@ -13,6 +13,8 @@ export interface Turma {
   businessId: string;
   name: string;
   description: string;
+  /** Professor vinculado (`businesses/{id}/professionals`) */
+  professionalId?: string;
   /** IDs de documentos em `businesses/{id}/customers` */
   studentIds: string[];
   /** Dias e horários de aula da turma */

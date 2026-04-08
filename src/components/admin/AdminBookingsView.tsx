@@ -6,10 +6,13 @@ import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useBookings, useUpdateBooking } from '@/lib/queries/bookings';
 import { useCustomers } from '@/lib/queries/customers';
 import { useProfessionals } from '@/lib/queries/professionals';
+import { useServices } from '@/lib/queries/services';
 import { useAttendanceRollCallsByTurmaDate, useUpsertAttendanceRollCall } from '@/lib/queries/attendance';
 import { useTurmas } from '@/lib/queries/turmas';
 import { BookingCalendar } from '@/components/admin/BookingCalendar';
 import { BookingStatus } from '@/types/booking';
+import type { ServiceInventoryItem } from '@/types/business';
+import type { InventoryItem } from '@/types/inventory';
 import type { RollCallStatus } from '@/types/attendance';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,10 +28,12 @@ interface UnavailabilityItem {
   reason?: string;
 }
 
+type BookingInventoryInput = Record<string, number>;
+
 export type AdminBookingsVariant = 'default' | 'preEnrollment' | 'rollCall';
 
 interface AdminBookingsViewProps {
-  /** When omitted, uses education → aulas experimentais, otherwise agendamentos. */
+  /** When omitted, uses education → calendário de aulas, otherwise agendamentos. */
   variant?: AdminBookingsVariant;
 }
 
@@ -44,6 +49,7 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
   const [view, setView] = useState<'calendar' | 'list'>(
     variant === 'rollCall' ? 'list' : 'calendar',
   );
+  const [preEnrollmentTab, setPreEnrollmentTab] = useState<'calendar' | 'reschedules'>('calendar');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [showUnavailabilityModal, setShowUnavailabilityModal] = useState(false);
@@ -69,12 +75,16 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
   const { data: bookings, isLoading } = useBookings(business?.id ?? '', filters);
   const { data: customers = [] } = useCustomers(business?.id ?? '');
   const { data: professionals = [] } = useProfessionals(business?.id ?? '', { active: true });
+  const { data: services = [] } = useServices(business?.id ?? '');
   const { data: turmas = [] } = useTurmas(business?.id ?? '');
   const upsertRollCall = useUpsertAttendanceRollCall(business?.id ?? '');
   const updateBooking = useUpdateBooking(business?.id ?? '');
   const [selectedRollCallDay, setSelectedRollCallDay] = useState<Date | null>(null);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('all');
   const [selectedRollCallTurmaId, setSelectedRollCallTurmaId] = useState<string | null>(null);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryByBookingId, setInventoryByBookingId] = useState<Record<string, BookingInventoryInput>>({});
+  const [inventoryErrorByBookingId, setInventoryErrorByBookingId] = useState<Record<string, string>>({});
 
   const selectedTurma = useMemo(
     () => turmas.find((turma) => turma.id === selectedTurmaId),
@@ -119,11 +129,177 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
         )
       : filteredBookings;
 
-  const handleStatusChange = async (bookingId: string, newStatus: BookingStatus) => {
-    await updateBooking.mutateAsync({
-      bookingId,
-      updates: { status: newStatus },
+  const serviceById = useMemo(
+    () => new Map(services.map((service) => [service.id, service])),
+    [services],
+  );
+  const inventoryItemById = useMemo(
+    () => new Map(inventoryItems.map((item) => [item.id, item])),
+    [inventoryItems],
+  );
+
+  const resolveServiceInventoryItems = (booking: (typeof filteredBookingsByTurma)[number]) => {
+    const service = serviceById.get(booking.serviceId);
+    const persisted = booking.usedInventoryItems?.filter((item) => Number(item.quantity) > 0) ?? [];
+    if (persisted.length > 0) {
+      return persisted.map((item) => {
+        const inventory = inventoryItemById.get(item.inventoryItemId);
+        return {
+          inventoryItemId: item.inventoryItemId,
+          inventoryItemName: item.inventoryItemName || inventory?.name || 'Produto',
+          quantity: Number(item.quantity) || 0,
+          unit: item.unit || inventory?.unit || 'un',
+        };
+      });
+    }
+
+    const serviceInventory = ((service?.inventoryItems ?? []) as ServiceInventoryItem[]).filter(
+      (item) => Number(item.quantity) > 0,
+    );
+    return serviceInventory.map((item) => {
+      const inventory = inventoryItemById.get(item.inventoryItemId);
+      return {
+        inventoryItemId: item.inventoryItemId,
+        inventoryItemName: item.inventoryItemName || inventory?.name || 'Produto',
+        quantity: Number(item.quantity) || 0,
+        unit: item.unit || inventory?.unit || 'un',
+      };
     });
+  };
+
+  const updateBookingInventoryQuantity = (
+    bookingId: string,
+    inventoryItemId: string,
+    quantity: number,
+  ) => {
+    setInventoryByBookingId((prev) => ({
+      ...prev,
+      [bookingId]: {
+        ...(prev[bookingId] || {}),
+        [inventoryItemId]: Number.isFinite(quantity) ? Math.max(0, quantity) : 0,
+      },
+    }));
+    setInventoryErrorByBookingId((prev) => {
+      if (!prev[bookingId]) return prev;
+      const next = { ...prev };
+      delete next[bookingId];
+      return next;
+    });
+  };
+
+  const handleStatusChange = async (bookingId: string, newStatus: BookingStatus) => {
+    const booking = filteredBookingsByTurma.find((item) => item.id === bookingId);
+    if (!booking) return;
+
+    if (newStatus !== 'completed' || booking.status === 'completed') {
+      await updateBooking.mutateAsync({
+        bookingId,
+        updates: { status: newStatus },
+      });
+      return;
+    }
+
+    const baseInventoryItems = resolveServiceInventoryItems(booking);
+    if (baseInventoryItems.length === 0) {
+      await updateBooking.mutateAsync({
+        bookingId,
+        updates: { status: newStatus },
+      });
+      return;
+    }
+
+    const selectedQuantities = inventoryByBookingId[booking.id] || {};
+    const usedInventoryItems = baseInventoryItems
+      .map((item) => ({
+        ...item,
+        quantity:
+          selectedQuantities[item.inventoryItemId] !== undefined
+            ? Number(selectedQuantities[item.inventoryItemId]) || 0
+            : item.quantity,
+      }))
+      .filter((item) => item.quantity > 0);
+
+    if (usedInventoryItems.length === 0) {
+      setInventoryErrorByBookingId((prev) => ({
+        ...prev,
+        [booking.id]: 'Informe ao menos um insumo utilizado para concluir.',
+      }));
+      return;
+    }
+
+    for (const item of usedInventoryItems) {
+      const inventory = inventoryItemById.get(item.inventoryItemId);
+      if (!inventory) {
+        setInventoryErrorByBookingId((prev) => ({
+          ...prev,
+          [booking.id]: `Insumo "${item.inventoryItemName}" não encontrado no estoque.`,
+        }));
+        return;
+      }
+      if (item.quantity > inventory.currentStock) {
+        setInventoryErrorByBookingId((prev) => ({
+          ...prev,
+          [booking.id]: `Estoque insuficiente para "${item.inventoryItemName}". Disponível: ${inventory.currentStock} ${inventory.unit}.`,
+        }));
+        return;
+      }
+    }
+
+    try {
+      for (const item of usedInventoryItems) {
+        const response = await fetch('/api/inventory/movements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: business?.id,
+            movement: {
+              itemId: item.inventoryItemId,
+              type: 'out',
+              quantity: item.quantity,
+              reason: `Consumo no atendimento #${booking.id}`,
+              orderId: booking.id,
+              createdBy: 'admin-bookings',
+            },
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao baixar insumos do estoque.');
+        }
+      }
+
+      await updateBooking.mutateAsync({
+        bookingId,
+        updates: {
+          status: newStatus,
+          usedInventoryItems,
+          inventoryDeductedAt: new Date(),
+        },
+      });
+
+      setInventoryItems((prev) =>
+        prev.map((entry) => {
+          const used = usedInventoryItems.find((item) => item.inventoryItemId === entry.id);
+          if (!used) return entry;
+          return {
+            ...entry,
+            currentStock: Math.max(0, entry.currentStock - used.quantity),
+          };
+        }),
+      );
+      setInventoryErrorByBookingId((prev) => {
+        if (!prev[booking.id]) return prev;
+        const next = { ...prev };
+        delete next[booking.id];
+        return next;
+      });
+    } catch (error) {
+      setInventoryErrorByBookingId((prev) => ({
+        ...prev,
+        [booking.id]:
+          error instanceof Error ? error.message : 'Erro ao registrar consumo de insumos.',
+      }));
+    }
   };
 
   const currentMonth = blocksMonth;
@@ -215,6 +391,20 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
     setSelectedRollCallTurmaId(turmas[0]?.id || null);
   }, [variant, turmas, selectedRollCallTurmaId]);
 
+  useEffect(() => {
+    const loadInventory = async () => {
+      if (!business?.id) return;
+      try {
+        const response = await fetch(`/api/inventory?businessId=${business.id}`);
+        const data = await response.json();
+        setInventoryItems(Array.isArray(data.items) ? data.items : []);
+      } catch {
+        setInventoryItems([]);
+      }
+    };
+    loadInventory();
+  }, [business?.id]);
+
   const handleAddUnavailability = async (e: React.FormEvent) => {
     e.preventDefault();
     await createUnavailability(false);
@@ -296,15 +486,25 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
     variant === 'rollCall'
       ? 'Lista de chamada'
       : variant === 'preEnrollment'
-        ? 'Aulas experimentais'
+        ? 'Calendário de aulas'
         : 'Agendamentos';
 
   const pageSubtitle =
     variant === 'rollCall'
       ? 'Acompanhe presença e situação das aulas em lista.'
       : variant === 'preEnrollment'
-        ? 'Centralize solicitações e organize o calendário pedagógico.'
+        ? 'Veja as aulas previstas no mês e gerencie remarcações de aulas experimentais.'
         : 'Gerencie todos os agendamentos';
+
+  const showTurmaMonthCalendar =
+    (variant === 'rollCall' && view === 'calendar') ||
+    (isPreEnrollment && preEnrollmentTab === 'calendar');
+  const showDefaultBookingCalendar =
+    !isPreEnrollment && view === 'calendar' && variant !== 'rollCall';
+  const showRollCallListPanel = variant === 'rollCall' && view === 'list';
+  const showBookingsDataTable =
+    (variant === 'default' && view === 'list') ||
+    (isPreEnrollment && preEnrollmentTab === 'reschedules');
 
   const colPerson = isEducation ? 'Aluno' : 'Cliente';
   const colService = isEducation ? 'Aula' : 'Serviço';
@@ -330,6 +530,114 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
       status,
     });
   };
+
+  const turmaScheduleCalendar = (
+    <div className="rounded-lg border border-neutral-200 bg-white p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => {
+            const prev = addMonths(rollCallCalendarMonth, -1);
+            setCalendarMonth(format(prev, 'yyyy-MM'));
+          }}
+          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
+        >
+          ←
+        </button>
+        <h2 className="text-xl font-semibold">
+          {format(rollCallCalendarMonth, 'MMMM yyyy', { locale: ptBR })}
+        </h2>
+        <button
+          type="button"
+          onClick={() => {
+            const next = addMonths(rollCallCalendarMonth, 1);
+            setCalendarMonth(format(next, 'yyyy-MM'));
+          }}
+          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
+        >
+          →
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-2">
+        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+          <div key={day} className="py-2 text-center text-sm font-medium text-neutral-600">
+            {day}
+          </div>
+        ))}
+
+        {rollCallDays.map((day, idx) => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          const dayEntries = rollCallEntriesByDate.get(dayKey) || [];
+          const isCurrentMonth = isSameMonth(day, rollCallCalendarMonth);
+          const isSelected = !!selectedRollCallDay && isSameDay(day, selectedRollCallDay);
+          return (
+            <div
+              key={idx}
+              onClick={() => setSelectedRollCallDay(isSelected ? null : day)}
+              className={`min-h-[110px] cursor-pointer rounded-lg border p-2 transition-colors ${
+                isSelected
+                  ? 'border-neutral-900 ring-2 ring-neutral-900 ring-offset-1'
+                  : 'border-neutral-200 hover:border-neutral-300'
+              } ${!isCurrentMonth ? 'bg-neutral-50 opacity-50' : 'bg-white'}`}
+            >
+              <div className="mb-1 text-sm font-medium">{format(day, 'd')}</div>
+              <div className="space-y-1">
+                {dayEntries.slice(0, 2).map((entry) => (
+                  <div
+                    key={`${entry.turmaId}-${entry.startTime}-${entry.endTime}`}
+                    className="rounded border border-blue-200 bg-blue-50 px-1 py-0.5 text-[10px] text-blue-800"
+                    title={`${entry.turmaName} (${entry.startTime}-${entry.endTime})`}
+                  >
+                    <div className="truncate font-medium">
+                      {entry.startTime} {entry.turmaName}
+                    </div>
+                  </div>
+                ))}
+                {dayEntries.length > 2 && (
+                  <div className="text-xs text-neutral-500">+{dayEntries.length - 2} mais</div>
+                )}
+                {dayEntries.length === 0 && isCurrentMonth && (
+                  <div className="text-[10px] text-neutral-400">Sem turma</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedRollCallDay && (
+        <div className="mt-4 rounded-lg border border-neutral-200 p-4">
+          <h3 className="font-medium text-neutral-900">
+            Turmas em {format(selectedRollCallDay, "dd/MM/yyyy (EEEE)", { locale: ptBR })}
+          </h3>
+          {selectedTurmaId !== 'all' && selectedTurma && (
+            <p className="mt-1 text-sm text-neutral-600">
+              Filtro ativo: <span className="font-medium">{selectedTurma.name}</span>
+            </p>
+          )}
+          <div className="mt-2 space-y-2">
+            {(rollCallEntriesByDate.get(format(selectedRollCallDay, 'yyyy-MM-dd')) || []).length === 0 ? (
+              <p className="text-sm text-neutral-500">Nenhuma turma neste dia.</p>
+            ) : (
+              (rollCallEntriesByDate.get(format(selectedRollCallDay, 'yyyy-MM-dd')) || []).map((entry) => (
+                <div
+                  key={`detail-${entry.turmaId}-${entry.startTime}-${entry.endTime}`}
+                  className="flex items-center justify-between rounded border border-neutral-200 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium text-neutral-900">{entry.turmaName}</span>
+                  <span className="text-neutral-600">
+                    {entry.startTime}-{entry.endTime} • {entry.studentsCount} aluno
+                    {entry.studentsCount === 1 ? '' : 's'}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (!business?.id || isLoading) {
     return (
@@ -421,119 +729,87 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
         )}
       </div>
 
-      {isPreEnrollment ? (
-        <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-          <p className="text-sm text-neutral-600">
-            A visualização de calendário e lista foi removida desta aba.
-          </p>
-        </div>
-      ) : view === 'calendar' ? (
-        <div className="space-y-4">
-          {variant === 'rollCall' ? (
-            <div className="rounded-lg border border-neutral-200 bg-white p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const prev = addMonths(rollCallCalendarMonth, -1);
-                    setCalendarMonth(format(prev, 'yyyy-MM'));
-                  }}
-                  className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
-                >
-                  ←
-                </button>
-                <h2 className="text-xl font-semibold">
-                  {format(rollCallCalendarMonth, 'MMMM yyyy', { locale: ptBR })}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = addMonths(rollCallCalendarMonth, 1);
-                    setCalendarMonth(format(next, 'yyyy-MM'));
-                  }}
-                  className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
-                >
-                  →
-                </button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-2">
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                  <div key={day} className="py-2 text-center text-sm font-medium text-neutral-600">
-                    {day}
-                  </div>
-                ))}
-
-                {rollCallDays.map((day, idx) => {
-                  const dayKey = format(day, 'yyyy-MM-dd');
-                  const dayEntries = rollCallEntriesByDate.get(dayKey) || [];
-                  const isCurrentMonth = isSameMonth(day, rollCallCalendarMonth);
-                  const isSelected = !!selectedRollCallDay && isSameDay(day, selectedRollCallDay);
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => setSelectedRollCallDay(isSelected ? null : day)}
-                      className={`min-h-[110px] cursor-pointer rounded-lg border p-2 transition-colors ${
-                        isSelected
-                          ? 'border-neutral-900 ring-2 ring-neutral-900 ring-offset-1'
-                          : 'border-neutral-200 hover:border-neutral-300'
-                      } ${!isCurrentMonth ? 'bg-neutral-50 opacity-50' : 'bg-white'}`}
-                    >
-                      <div className="mb-1 text-sm font-medium">{format(day, 'd')}</div>
-                      <div className="space-y-1">
-                        {dayEntries.slice(0, 2).map((entry) => (
-                          <div
-                            key={`${entry.turmaId}-${entry.startTime}-${entry.endTime}`}
-                            className="rounded border border-blue-200 bg-blue-50 px-1 py-0.5 text-[10px] text-blue-800"
-                            title={`${entry.turmaName} (${entry.startTime}-${entry.endTime})`}
-                          >
-                            <div className="truncate font-medium">{entry.startTime} {entry.turmaName}</div>
-                          </div>
-                        ))}
-                        {dayEntries.length > 2 && (
-                          <div className="text-xs text-neutral-500">+{dayEntries.length - 2} mais</div>
-                        )}
-                        {dayEntries.length === 0 && isCurrentMonth && (
-                          <div className="text-[10px] text-neutral-400">Sem turma</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {selectedRollCallDay && (
-                <div className="mt-4 rounded-lg border border-neutral-200 p-4">
-                  <h3 className="font-medium text-neutral-900">
-                    Turmas em {format(selectedRollCallDay, "dd/MM/yyyy (EEEE)", { locale: ptBR })}
-                  </h3>
-                  {selectedTurmaId !== 'all' && selectedTurma && (
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Filtro ativo: <span className="font-medium">{selectedTurma.name}</span>
-                    </p>
-                  )}
-                  <div className="mt-2 space-y-2">
-                    {(rollCallEntriesByDate.get(format(selectedRollCallDay, 'yyyy-MM-dd')) || []).length === 0 ? (
-                      <p className="text-sm text-neutral-500">Nenhuma turma neste dia.</p>
-                    ) : (
-                      (rollCallEntriesByDate.get(format(selectedRollCallDay, 'yyyy-MM-dd')) || []).map((entry) => (
-                        <div
-                          key={`detail-${entry.turmaId}-${entry.startTime}-${entry.endTime}`}
-                          className="flex items-center justify-between rounded border border-neutral-200 px-3 py-2 text-sm"
-                        >
-                          <span className="font-medium text-neutral-900">{entry.turmaName}</span>
-                          <span className="text-neutral-600">
-                            {entry.startTime}-{entry.endTime} • {entry.studentsCount} aluno{entry.studentsCount === 1 ? '' : 's'}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
+      {isPreEnrollment && (
+        <>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPreEnrollmentTab('calendar')}
+                className={`rounded-lg px-4 py-2 text-sm ${
+                  preEnrollmentTab === 'calendar' ? 'bg-neutral-900 text-white' : 'border border-neutral-300'
+                }`}
+              >
+                Calendário
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreEnrollmentTab('reschedules')}
+                className={`rounded-lg px-4 py-2 text-sm ${
+                  preEnrollmentTab === 'reschedules' ? 'bg-neutral-900 text-white' : 'border border-neutral-300'
+                }`}
+              >
+                Remarcações
+              </button>
             </div>
-          ) : (
-            <>
+            {preEnrollmentTab === 'calendar' && (
+              <select
+                value={selectedTurmaId}
+                onChange={(e) => {
+                  setSelectedTurmaId(e.target.value);
+                  setSelectedRollCallDay(null);
+                }}
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              >
+                <option value="all">Todas as turmas</option>
+                {turmas.map((turma) => (
+                  <option key={turma.id} value={turma.id}>
+                    {turma.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {preEnrollmentTab === 'reschedules' && (
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as BookingStatus | 'all')}
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              >
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendente</option>
+                <option value="confirmed">Confirmado</option>
+                <option value="completed">Concluído</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="no_show">Não compareceu</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                {dateFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setDateFilter('')}
+                    className="text-sm text-neutral-600 hover:text-neutral-900"
+                  >
+                    Todas
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {showDefaultBookingCalendar && (
+        <div className="space-y-4">
+          <>
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -554,8 +830,7 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                 onMonthChange={(month) => setCalendarMonth(month)}
                 onStatusChange={handleStatusChange}
               />
-            </>
-          )}
+          </>
 
           {showUnavailabilityModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -718,7 +993,11 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
             </div>
           )}
         </div>
-      ) : variant === 'rollCall' ? (
+      )}
+
+      {showTurmaMonthCalendar && <div className="space-y-4">{turmaScheduleCalendar}</div>}
+
+      {showRollCallListPanel && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="rounded-lg border border-neutral-200 bg-white">
             <div className="border-b border-neutral-200 px-4 py-3">
@@ -816,7 +1095,9 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
             )}
           </div>
         </div>
-      ) : (
+      )}
+
+      {showBookingsDataTable && (
         <div className="rounded-lg border border-neutral-200 bg-white">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -835,6 +1116,9 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                     Data/Hora
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase text-neutral-500">
+                    Insumos
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-neutral-500">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase text-neutral-500">
@@ -851,6 +1135,9 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                   const customerName =
                     `${booking.customerData?.firstName || ''} ${booking.customerData?.lastName || ''}`.trim() ||
                     '—';
+                  const rowInventoryItems = resolveServiceInventoryItems(booking);
+                  const selectedQuantities = inventoryByBookingId[booking.id] || {};
+                  const isCompleted = booking.status === 'completed';
 
                   return (
                     <tr key={booking.id} className="hover:bg-neutral-50">
@@ -881,6 +1168,51 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {format(bookingDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {rowInventoryItems.length === 0 ? (
+                          <span className="text-neutral-400">Sem insumos</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {rowInventoryItems.map((item) => {
+                              const currentValue =
+                                selectedQuantities[item.inventoryItemId] !== undefined
+                                  ? selectedQuantities[item.inventoryItemId]
+                                  : item.quantity;
+                              return (
+                                <div
+                                  key={`${booking.id}-${item.inventoryItemId}`}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span className="min-w-0 flex-1 truncate text-xs text-neutral-700">
+                                    {item.inventoryItemName}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={currentValue}
+                                    onChange={(e) =>
+                                      updateBookingInventoryQuantity(
+                                        booking.id,
+                                        item.inventoryItemId,
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                    disabled={isCompleted}
+                                    className="w-20 rounded border border-neutral-300 px-2 py-1 text-xs disabled:bg-neutral-100"
+                                  />
+                                  <span className="w-12 text-xs text-neutral-500">{item.unit}</span>
+                                </div>
+                              );
+                            })}
+                            {inventoryErrorByBookingId[booking.id] && (
+                              <p className="text-xs text-red-600">
+                                {inventoryErrorByBookingId[booking.id]}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span

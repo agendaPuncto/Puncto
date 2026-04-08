@@ -56,7 +56,7 @@ const adminNavItems: NavItem[] = [
   { href: '/tenant/admin/settings', key: 'settings', icon: '⚙️', feature: 'always' },
 ];
 
-/** Education: school-oriented labels and routes (no cardápio/pedidos/mesas/serviços). */
+/** Education: school-oriented labels and routes (no cardápio/pedidos/mesas/serviços/estoque/compras/ponto). */
 const educationAdminNavItems: NavItem[] = [
   { href: '/tenant/admin/dashboard', key: 'dashboard', icon: '📊', feature: 'always' },
   { href: '/tenant/admin/notifications', key: 'notifications', icon: '🔔', feature: 'always' },
@@ -67,9 +67,6 @@ const educationAdminNavItems: NavItem[] = [
   { href: '/tenant/admin/attendance', key: 'rollCall', icon: '📝', feature: 'scheduling' },
   { href: '/tenant/admin/payments', key: 'payments', icon: '💳', feature: 'payments' },
   { href: '/tenant/admin/financial', key: 'financial', icon: '💰', feature: 'analytics' },
-  { href: '/tenant/admin/inventory', key: 'inventory', icon: '📦', feature: 'inventoryManagement' },
-  { href: '/tenant/admin/purchases', key: 'purchases', icon: '🛒', feature: 'purchaseOrders' },
-  { href: '/tenant/admin/time-clock', key: 'timeClock', icon: '⏰', feature: 'timeClock' },
   { href: '/tenant/admin/loyalty', key: 'loyalty', icon: '🎁', feature: 'loyaltyPrograms' },
   { href: '/tenant/admin/whatsapp', key: 'whatsapp', icon: '💬', feature: 'always' },
   { href: '/tenant/admin/settings', key: 'settings', icon: '⚙️', feature: 'always' },
@@ -133,7 +130,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               const label =
                 item.key === 'customers' && business?.industry === 'clinic'
                   ? t('patients')
-                  : t(item.key);
+                  : item.key === 'professionals' && business?.industry === 'education'
+                    ? t('teachers')
+                    : t(item.key);
               return (
                 <Link
                   key={item.href}

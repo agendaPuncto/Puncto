@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   Timestamp,
+  deleteField,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -19,11 +20,16 @@ function mapTurmaDoc(docSnap: QueryDocumentSnapshot): Turma {
         (slot) => slot && typeof slot.startTime === 'string' && typeof slot.endTime === 'string',
       )
     : [];
+  const professionalId =
+    typeof data.professionalId === 'string' && data.professionalId.trim() !== ''
+      ? data.professionalId
+      : undefined;
   return {
     id: docSnap.id,
     businessId: (data.businessId as string) || '',
     name: (data.name as string) || '',
     description: typeof data.description === 'string' ? data.description : '',
+    professionalId,
     studentIds: Array.isArray(data.studentIds) ? (data.studentIds as string[]) : [],
     schedules,
     createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || data.createdAt,
@@ -84,7 +90,7 @@ export function useUpdateTurma(businessId: string) {
       updates,
     }: {
       turmaId: string;
-      updates: Partial<Pick<Turma, 'name' | 'description' | 'studentIds' | 'schedules'>>;
+      updates: Partial<Pick<Turma, 'name' | 'description' | 'studentIds' | 'schedules' | 'professionalId'>>;
     }) => {
       const ref = doc(db, 'businesses', businessId, 'turmas', turmaId);
       const payload: Record<string, unknown> = { updatedAt: Timestamp.now() };
@@ -92,6 +98,12 @@ export function useUpdateTurma(businessId: string) {
       if (updates.description !== undefined) payload.description = updates.description.trim();
       if (updates.studentIds !== undefined) payload.studentIds = updates.studentIds;
       if (updates.schedules !== undefined) payload.schedules = updates.schedules;
+      if (updates.professionalId !== undefined) {
+        payload.professionalId =
+          updates.professionalId && updates.professionalId.trim() !== ''
+            ? updates.professionalId.trim()
+            : deleteField();
+      }
       await updateDoc(ref, payload);
     },
     onSuccess: () => {

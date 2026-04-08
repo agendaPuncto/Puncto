@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
 import { Customer } from '@/types/booking';
 import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
@@ -11,6 +12,7 @@ import { formatPhoneInput } from '@/lib/utils/phone';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
+  const { firebaseUser } = useAuth();
   const isClinic = business?.industry === 'clinic';
   const isEducation = business?.industry === 'education';
   const { data: customers = [], isLoading } = useCustomers(business.id);
@@ -29,6 +31,8 @@ export default function AdminCustomersPage() {
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [accessLoadingId, setAccessLoadingId] = useState<string | null>(null);
+  const [subscriptionLoadingId, setSubscriptionLoadingId] = useState<string | null>(null);
 
   const patientsLabel = isClinic ? 'Pacientes' : isEducation ? 'Alunos' : 'Clientes';
   const registerLabel = isClinic
@@ -127,6 +131,61 @@ export default function AdminCustomersPage() {
       setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '', notes: '' });
     } catch (err: any) {
       setError(err.message || errorCreate);
+    }
+  };
+
+  const handleCreateStudentAccess = async (customer: Customer) => {
+    if (!firebaseUser) return;
+    setAccessLoadingId(customer.id);
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch('/api/students/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          businessId: business.id,
+          customerId: customer.id,
+          email: customer.email,
+          displayName: `${customer.firstName} ${customer.lastName}`.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao criar acesso');
+      alert(`Acesso criado. Senha temporaria: ${data.temporaryPassword}`);
+    } catch (err: any) {
+      alert(err?.message || 'Erro ao criar acesso');
+    } finally {
+      setAccessLoadingId(null);
+    }
+  };
+
+  const handleCreateSubscription = async (customer: Customer) => {
+    if (!firebaseUser) return;
+    const amountStr = prompt('Valor da mensalidade (em R$, ex: 299.90):', '299.90');
+    if (!amountStr) return;
+    const cents = Math.round(Number(amountStr.replace(',', '.')) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) return;
+    setSubscriptionLoadingId(customer.id);
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch('/api/students/subscriptions/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          action: 'create',
+          businessId: business.id,
+          customerId: customer.id,
+          amount: cents,
+          currency: 'brl',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao criar mensalidade');
+      if (data.checkoutUrl) window.open(data.checkoutUrl, '_blank');
+    } catch (err: any) {
+      alert(err?.message || 'Erro ao criar mensalidade');
+    } finally {
+      setSubscriptionLoadingId(null);
     }
   };
 
@@ -323,6 +382,9 @@ export default function AdminCustomersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Contato</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Agendamentos</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Total Gasto</th>
+                {isEducation && (
+                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase">Ações aluno</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200">
@@ -343,6 +405,34 @@ export default function AdminCustomersPage() {
                   <td className="px-6 py-4 text-sm font-medium">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((customer.totalSpent || 0) / 100)}
                   </td>
+                  {isEducation && (
+                    <td className="px-6 py-4 text-right text-sm">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateStudentAccess(customer);
+                          }}
+                          disabled={!customer.email || accessLoadingId === customer.id}
+                          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                        >
+                          Acesso
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateSubscription(customer);
+                          }}
+                          disabled={subscriptionLoadingId === customer.id}
+                          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+                        >
+                          Mensalidade
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
