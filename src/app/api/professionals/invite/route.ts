@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     // by having the client call sendPasswordResetEmail - but the professional doesn't have an account "from their perspective" yet. Actually they do - we created it. So we could have the OWNER click "Send reset email" and we call an API that... we need to send the email from server. Let me use a simple approach:
     // Create a Cloud Function isn't in this codebase. So we'll use fetch to Firebase Identity Toolkit REST API.
     // Actually, the easiest: create the user. The professional will use "Forgot password" with their email - that will work since we created the account. So we just need to inform the owner "Tell the professional to use 'Forgot password' at the login page with their email to set their password." Not ideal.
-    // Better: Use the Admin generatePasswordResetLink, then we need to send it. If the project has Mailgun/SendGrid/nodemailer configured, we could use that. Let me check if there's email sending in the codebase.
+    // Better: Use the Admin generatePasswordResetLink, then we need to send it. The project uses ZeptoMail for transactional email delivery.
     const resetLink = await getAuth().generatePasswordResetLink(email);
 
     try {
