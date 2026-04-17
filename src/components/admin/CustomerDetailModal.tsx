@@ -22,6 +22,7 @@ import type { AnamnesisForm as AnamnesisFormType, AnamnesisFormField } from '@/t
 import { printEmr } from '@/lib/utils/emrPrint';
 import { printPrescription } from '@/lib/utils/prescriptionPrint';
 import { formatPhoneInput } from '@/lib/utils/phone';
+import { BRAZIL_UFS } from '@/lib/constants/brazilUfs';
 
 function normalizePhone(phone: string | undefined): string {
   if (!phone) return '';
@@ -620,6 +621,13 @@ export function CustomerDetailModal({
     birthDate: customer.birthDate || '',
     notes: customer.notes || '',
     tuitionTypeId: customer.tuitionTypeId || '',
+    address: {
+      street: customer.address?.street ?? '',
+      complement: customer.address?.complement ?? '',
+      neighborhood: customer.address?.neighborhood ?? '',
+      city: customer.address?.city ?? '',
+      state: customer.address?.state ?? '',
+    },
   });
   useEffect(() => {
     setFormData({
@@ -630,6 +638,13 @@ export function CustomerDetailModal({
       birthDate: customer.birthDate || '',
       notes: customer.notes || '',
       tuitionTypeId: customer.tuitionTypeId || '',
+      address: {
+        street: customer.address?.street ?? '',
+        complement: customer.address?.complement ?? '',
+        neighborhood: customer.address?.neighborhood ?? '',
+        city: customer.address?.city ?? '',
+        state: customer.address?.state ?? '',
+      },
     });
   }, [
     customer.id,
@@ -640,6 +655,11 @@ export function CustomerDetailModal({
     customer.birthDate,
     customer.notes,
     customer.tuitionTypeId,
+    customer.address?.street,
+    customer.address?.complement,
+    customer.address?.neighborhood,
+    customer.address?.city,
+    customer.address?.state,
   ]);
   const [error, setError] = useState<string | null>(null);
 
@@ -679,6 +699,13 @@ export function CustomerDetailModal({
           email: formData.email.trim() || undefined,
           notes: formData.notes.trim() || undefined,
           birthDate: formData.birthDate || undefined,
+          address: {
+            street: formData.address.street.trim(),
+            complement: formData.address.complement.trim(),
+            neighborhood: formData.address.neighborhood.trim(),
+            city: formData.address.city.trim(),
+            state: formData.address.state.trim(),
+          },
           ...(isEducation ? { tuitionTypeId: formData.tuitionTypeId.trim() } : {}),
         },
       });
@@ -847,6 +874,89 @@ export function CustomerDetailModal({
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
                   rows={3}
                 />
+              </div>
+              <div className="border-t border-neutral-200 pt-4 space-y-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Endereço</h3>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Rua</label>
+                  <input
+                    type="text"
+                    value={formData.address.street}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        address: { ...formData.address, street: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    placeholder="Logradouro"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Complemento</label>
+                  <input
+                    type="text"
+                    value={formData.address.complement}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        address: { ...formData.address, complement: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    placeholder="Apto, bloco, referência..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Bairro</label>
+                    <input
+                      type="text"
+                      value={formData.address.neighborhood}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: { ...formData.address, neighborhood: e.target.value },
+                        })
+                      }
+                      className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Cidade</label>
+                    <input
+                      type="text"
+                      value={formData.address.city}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: { ...formData.address, city: e.target.value },
+                        })
+                      }
+                      className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Estado (UF)</label>
+                  <select
+                    value={formData.address.state}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        address: { ...formData.address, state: e.target.value },
+                      })
+                    }
+                    className="w-full max-w-xs rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">Selecione...</option>
+                    {BRAZIL_UFS.map((uf) => (
+                      <option key={uf} value={uf}>
+                        {uf}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {isEducation && (
                 <div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, db } from '@/lib/firebaseAdmin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { notifyLessonRescheduleRequestCreated } from '@/lib/server/lessonRescheduleNotifications';
 
 type Action =
   | 'create_request'
@@ -212,11 +213,14 @@ export async function POST(request: NextRequest) {
       const turmaSnap = await turmaRef.get();
       if (!turmaSnap.exists) return NextResponse.json({ error: 'Turma nao encontrada' }, { status: 404 });
       const turmaData = turmaSnap.data() as {
+        name?: string;
         studentIds?: string[];
         professionalId?: string;
         maxStudents?: number;
         schedules?: Array<{ weekday?: number; startTime?: string; endTime?: string }>;
       };
+      const turmaDisplayName =
+        typeof turmaData.name === 'string' && turmaData.name.trim() ? turmaData.name.trim() : 'Turma';
 
       if (!turmaHasCapacity(turmaData.studentIds, turmaData.maxStudents)) {
         return NextResponse.json({ error: 'Turma sem vagas para reposicao' }, { status: 409 });
@@ -270,6 +274,23 @@ export async function POST(request: NextRequest) {
         },
         { merge: true },
       );
+
+      try {
+        const customerSnap = await businessRef.collection('customers').doc(studentId).get();
+        const cust = customerSnap.data() as { firstName?: string; lastName?: string } | undefined;
+        await notifyLessonRescheduleRequestCreated({
+          businessId,
+          requestId: requestRef.id,
+          turmaName: turmaDisplayName,
+          professionalId,
+          customerFirstName: cust?.firstName,
+          customerLastName: cust?.lastName,
+          requestedDate,
+          requestedStartTime,
+        });
+      } catch (notifyErr) {
+        console.error('[students/reschedules/manage] notifyLessonRescheduleRequestCreated', notifyErr);
+      }
 
       return NextResponse.json({ success: true, requestId: requestRef.id });
     }

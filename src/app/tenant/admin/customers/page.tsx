@@ -13,6 +13,7 @@ import { CustomerDetailModal } from '@/components/admin/CustomerDetailModal';
 import { StudentEducationDetailModal } from '@/components/admin/StudentEducationDetailModal';
 import { AnamnesisFormsSection } from '@/components/admin/AnamnesisFormsSection';
 import { formatPhoneInput } from '@/lib/utils/phone';
+import { BRAZIL_UFS } from '@/lib/constants/brazilUfs';
 
 export default function AdminCustomersPage() {
   const { business } = useBusiness();
@@ -36,6 +37,13 @@ export default function AdminCustomersPage() {
     birthDate: '',
     notes: '',
     tuitionTypeId: '',
+    address: {
+      street: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+    },
   });
   const [error, setError] = useState<string | null>(null);
   const [accessLoadingId, setAccessLoadingId] = useState<string | null>(null);
@@ -134,6 +142,7 @@ export default function AdminCustomersPage() {
         birthDate: formData.birthDate || undefined,
         notes: formData.notes.trim() || undefined,
         ...(isEducation && formData.tuitionTypeId ? { tuitionTypeId: formData.tuitionTypeId } : {}),
+        address: formData.address,
       });
 
       if (
@@ -157,7 +166,16 @@ export default function AdminCustomersPage() {
       }
 
       setShowForm(false);
-      setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '', notes: '', tuitionTypeId: '' });
+      setFormData({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        birthDate: '',
+        notes: '',
+        tuitionTypeId: '',
+        address: { street: '', complement: '', neighborhood: '', city: '', state: '' },
+      });
     } catch (err: any) {
       setError(err.message || errorCreate);
     }
@@ -291,7 +309,7 @@ export default function AdminCustomersPage() {
       {showForm && (
         <div className="mb-6 rounded-xl border border-neutral-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-neutral-900 mb-4">{newPatientLabel}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+          <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Nome *</label>
@@ -357,6 +375,89 @@ export default function AdminCustomersPage() {
                 placeholder={notesPlaceholder}
                 rows={2}
               />
+            </div>
+            <div className="border-t border-neutral-200 pt-4 space-y-4">
+              <h3 className="text-sm font-semibold text-neutral-900">Endereço</h3>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Rua</label>
+                <input
+                  type="text"
+                  value={formData.address.street}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, street: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  placeholder="Logradouro"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Complemento</label>
+                <input
+                  type="text"
+                  value={formData.address.complement}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, complement: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  placeholder="Apto, bloco, referência..."
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Bairro</label>
+                  <input
+                    type="text"
+                    value={formData.address.neighborhood}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        address: { ...formData.address, neighborhood: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Cidade</label>
+                  <input
+                    type="text"
+                    value={formData.address.city}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        address: { ...formData.address, city: e.target.value },
+                      })
+                    }
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Estado (UF)</label>
+                <select
+                  value={formData.address.state}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, state: e.target.value },
+                    })
+                  }
+                  className="w-full max-w-xs rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                >
+                  <option value="">Selecione...</option>
+                  {BRAZIL_UFS.map((uf) => (
+                    <option key={uf} value={uf}>
+                      {uf}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             {isEducation && (
               <div>

@@ -166,6 +166,8 @@ export function useCreateRescheduleRequest(businessId: string) {
       });
       queryClient.invalidateQueries({ queryKey: ['studentAttendance', businessId] });
       queryClient.invalidateQueries({ queryKey: ['replacementSlotCatalog', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications_unread_count', businessId] });
     },
   });
 }
