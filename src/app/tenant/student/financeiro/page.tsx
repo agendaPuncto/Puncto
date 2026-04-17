@@ -1,51 +1,67 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
-import {
-  useStudentCustomerProfile,
-  useStudentPayments,
-  useStudentSubscriptions,
-} from '@/lib/queries/studentPortal';
+import { useStudentCustomerProfile, useStudentSubscriptions } from '@/lib/queries/studentPortal';
 import { useTuitionTypes } from '@/lib/queries/tuitionTypes';
 import { IncompleteTuitionPayment } from '@/components/student/IncompleteTuitionPayment';
 import { ensureStudentTuitionSubscription } from '@/lib/student/ensureTuitionSubscription';
 import { getStudentCustomerId } from '@/lib/student/studentSession';
-import type { Payment } from '@/types/payment';
 
 const BLOCKING_STATUSES = new Set(['active', 'past_due', 'incomplete', 'pending_checkout']);
 
-function formatStudentPayment(p: Payment) {
-  const amountCents = typeof p.amount === 'number' && Number.isFinite(p.amount) ? p.amount : 0;
-  const code = (p.currency || 'brl').toString().trim().toUpperCase();
-  const currency = code.length === 3 ? code : 'BRL';
-  try {
-    return (amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency });
-  } catch {
-    return `${(amountCents / 100).toFixed(2)} ${currency}`;
-  }
-}
-
 export default function StudentFinanceiroPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, firebaseUser } = useAuth();
   const { business } = useBusiness();
   const studentCustomerId = getStudentCustomerId(user);
   const isEducation = business?.industry === 'education';
 
   const {
-    data: payments = [],
-    isError: paymentsError,
-    error: paymentsErrObj,
-  } = useStudentPayments(business.id, studentCustomerId);
-  const {
     data: subscriptions = [],
     refetch: refetchSubs,
     isError: subsError,
     error: subsErrObj,
   } = useStudentSubscriptions(business.id, studentCustomerId);
+
+  useEffect(() => {
+    const redirectStatus = searchParams.get('redirect_status');
+    if (redirectStatus !== 'succeeded' || !searchParams.get('payment_intent')) return;
+    if (!firebaseUser || !business?.id || !studentCustomerId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/students/subscriptions/manage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ action: 'sync_from_stripe', businessId: business.id }),
+        });
+        if (!res.ok && !cancelled) {
+          console.warn('[financeiro] sync_from_stripe', await res.text());
+        }
+        if (cancelled) return;
+        await queryClient.invalidateQueries({ queryKey: ['studentSubscriptions', business.id, studentCustomerId] });
+        await refetchSubs();
+        router.replace('/tenant/student/financeiro');
+      } catch (e) {
+        if (!cancelled) console.warn('[financeiro] pos-pagamento', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, firebaseUser, business?.id, studentCustomerId, queryClient, router, refetchSubs]);
   const { data: customerProfile, isLoading: profileLoading } = useStudentCustomerProfile(
     business.id,
     studentCustomerId,
@@ -123,15 +139,8 @@ export default function StudentFinanceiroPage() {
   };
 
   const loadError = (() => {
-    if (!paymentsError && !subsError) return null;
-    const parts: string[] = [];
-    if (paymentsError && paymentsErrObj != null) {
-      parts.push(paymentsErrObj instanceof Error ? paymentsErrObj.message : String(paymentsErrObj));
-    }
-    if (subsError && subsErrObj != null) {
-      parts.push(subsErrObj instanceof Error ? subsErrObj.message : String(subsErrObj));
-    }
-    return parts.length ? parts.join(' · ') : 'Erro ao carregar';
+    if (!subsError || subsErrObj == null) return null;
+    return subsErrObj instanceof Error ? subsErrObj.message : String(subsErrObj);
   })();
 
   return (
@@ -195,36 +204,26 @@ export default function StudentFinanceiroPage() {
       )}
 
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <p className="text-sm text-neutral-500">Assinatura atual</p>
+        <p className="text-sm text-neutral-500">Assinatura e cobrança</p>
         <p className="mt-1 text-base font-medium text-neutral-900">{activeSub?.status || 'Sem assinatura ativa'}</p>
+        <p className="mt-2 text-sm text-neutral-600 leading-relaxed">
+          O histórico de faturas, comprovantes e a troca do cartão ficam no{' '}
+          <span className="font-medium text-neutral-800">portal seguro da Stripe</span>, parceira de pagamentos da escola.
+          Use o botão abaixo sempre que precisar ver detalhes da assinatura ou baixar uma fatura.
+        </p>
         <button
           type="button"
           onClick={openBillingPortal}
           disabled={!activeSub || activeSub.status === 'incomplete'}
-          className="mt-3 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+          className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
         >
-          Gerenciar pagamento
+          Abrir portal de cobrança (faturas e cartão)
         </button>
         {activeSub?.status === 'incomplete' && (
           <p className="mt-2 text-xs text-neutral-500">
-            Use o bloco acima para pagar a mensalidade antes de gerenciar a forma de pagamento.
+            Conclua o primeiro pagamento no bloco acima; depois você poderá abrir o portal para gerenciar a forma de
+            pagamento e ver as faturas.
           </p>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <p className="mb-3 text-sm text-neutral-500">Histórico de pagamentos</p>
-        {payments.length === 0 ? (
-          <p className="text-sm text-neutral-500">Sem pagamentos registrados.</p>
-        ) : (
-          <div className="space-y-2">
-            {payments.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2">
-                <span className="text-sm text-neutral-700">{p.status}</span>
-                <span className="text-sm font-medium text-neutral-900">{formatStudentPayment(p)}</span>
-              </div>
-            ))}
-          </div>
         )}
       </div>
     </div>

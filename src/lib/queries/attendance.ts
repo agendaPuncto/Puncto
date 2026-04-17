@@ -21,6 +21,9 @@ function mapDoc(docSnap: QueryDocumentSnapshot): AttendanceRollCall {
     studentId: (data.studentId as string) || '',
     date: (data.date as string) || '',
     status: (data.status as RollCallStatus) || 'pending',
+    replacementRequestIds: Array.isArray(data.replacementRequestIds)
+      ? (data.replacementRequestIds as string[])
+      : undefined,
     markedAt:
       (data.markedAt as { toDate?: () => Date })?.toDate?.() ||
       (data.markedAt as unknown as Date),

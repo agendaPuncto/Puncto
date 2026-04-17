@@ -43,11 +43,22 @@ service cloud.firestore {
              request.auth.token.businessRoles[businessId] == 'owner';
     }
 
+    // Staff da unidade: dono/gestor/profissional via claims (business_user) ou claims de tenant sem
+    // userType legível (ex.: convite aceito sem atualizar userType), ou documento staff ativo.
+    // get()/exists() não aplicam as regras do documento alvo — evita dependência circular com /staff.
     function isBusinessStaff(businessId) {
       return (isPlatformAdmin()) ||
              (isBusinessUser() &&
               request.auth.token.businessRoles != null &&
-              request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional']);
+              request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional']) ||
+             (isAuthenticated() &&
+              request.auth.token.businessRoles != null &&
+              request.auth.token.businessRoles[businessId] in ['owner', 'manager', 'professional'] &&
+              getUserType() != 'customer' &&
+              getUserType() != 'student') ||
+             (isAuthenticated() &&
+              exists(/databases/$(database)/documents/businesses/$(businessId)/staff/$(request.auth.uid)) &&
+              get(/databases/$(database)/documents/businesses/$(businessId)/staff/$(request.auth.uid)).data.active != false);
     }
 
     function hasPermission(businessId, permission) {
@@ -151,6 +162,39 @@ service cloud.firestore {
         allow write: if isBusinessOwner(businessId) ||
                        hasPermission(businessId, 'manageBookings') ||
                        isPlatformAdmin();
+      }
+
+      // Educação: solicitações de reposição de faltas
+      match /lessonRescheduleRequests/{requestId} {
+        allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+        allow read: if isStudentOfBusiness(businessId) &&
+                      resource.data.studentId == request.auth.token.studentCustomerId;
+
+        allow create: if isStudentOfBusiness(businessId) &&
+                        request.resource.data.businessId == businessId &&
+                        request.resource.data.studentId == request.auth.token.studentCustomerId &&
+                        request.resource.data.requestedByUserId == request.auth.uid &&
+                        request.resource.data.status == 'pending';
+
+        // Aluno só pode cancelar uma solicitação própria pendente.
+        allow update: if isStudentOfBusiness(businessId) &&
+                        resource.data.studentId == request.auth.token.studentCustomerId &&
+                        resource.data.status == 'pending' &&
+                        request.resource.data.studentId == resource.data.studentId &&
+                        request.resource.data.businessId == resource.data.businessId &&
+                        request.resource.data.attendanceRollCallId == resource.data.attendanceRollCallId &&
+                        request.resource.data.turmaId == resource.data.turmaId &&
+                        request.resource.data.requestedDate == resource.data.requestedDate &&
+                        request.resource.data.requestedStartTime == resource.data.requestedStartTime &&
+                        request.resource.data.requestedEndTime == resource.data.requestedEndTime &&
+                        request.resource.data.requestedByUserId == resource.data.requestedByUserId &&
+                        request.resource.data.status == 'cancelled_by_student';
+
+        // Staff/plataforma fazem revisão (aprovar/reprovar)
+        allow update: if isBusinessOwner(businessId) ||
+                        hasPermission(businessId, 'manageBookings') ||
+                        isPlatformAdmin();
+        allow delete: if false;
       }
 
       // Clinic: anamnese forms and responses (prontuário)

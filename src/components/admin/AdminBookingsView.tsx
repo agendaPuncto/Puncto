@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { useBookings, useUpdateBooking } from '@/lib/queries/bookings';
 import { useCustomers } from '@/lib/queries/customers';
@@ -10,12 +11,19 @@ import { useServices } from '@/lib/queries/services';
 import { useAttendanceRollCallsByTurmaDate, useUpsertAttendanceRollCall } from '@/lib/queries/attendance';
 import { useTurmas } from '@/lib/queries/turmas';
 import { BookingCalendar } from '@/components/admin/BookingCalendar';
+import { RescheduleRequestsReviewPanel } from '@/components/education/RescheduleRequestsReviewPanel';
 import { BookingStatus } from '@/types/booking';
 import type { ServiceInventoryItem } from '@/types/business';
 import type { InventoryItem } from '@/types/inventory';
 import type { RollCallStatus } from '@/types/attendance';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  findNearestClassDate,
+  formatTurmaClassWeekdaysShort,
+  isClassDayForTurma,
+  stepClassDate,
+} from '@/lib/utils/turmaClassDays';
 
 type UnavailabilityScope = 'business' | 'professional';
 
@@ -38,6 +46,8 @@ interface AdminBookingsViewProps {
 }
 
 export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewProps) {
+  const searchParams = useSearchParams();
+  const rescheduleTabParam = searchParams.get('tab');
   const { business } = useBusiness();
   const variant: AdminBookingsVariant =
     variantProp ??
@@ -50,6 +60,11 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
     variant === 'rollCall' ? 'list' : 'calendar',
   );
   const [preEnrollmentTab, setPreEnrollmentTab] = useState<'calendar' | 'reschedules'>('calendar');
+
+  useEffect(() => {
+    if (variant !== 'preEnrollment' || rescheduleTabParam !== 'reschedules') return;
+    setPreEnrollmentTab('reschedules');
+  }, [variant, rescheduleTabParam]);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [showUnavailabilityModal, setShowUnavailabilityModal] = useState(false);
@@ -82,6 +97,8 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
   const [selectedRollCallDay, setSelectedRollCallDay] = useState<Date | null>(null);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('all');
   const [selectedRollCallTurmaId, setSelectedRollCallTurmaId] = useState<string | null>(null);
+  /** Lista de chamada (variant rollCall): só dias em que a turma tem aula na grade. */
+  const [rollCallListDate, setRollCallListDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryByBookingId, setInventoryByBookingId] = useState<Record<string, BookingInventoryInput>>({});
   const [inventoryErrorByBookingId, setInventoryErrorByBookingId] = useState<Record<string, string>>({});
@@ -98,7 +115,10 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
     () => new Set(selectedTurma?.studentIds || []),
     [selectedTurma],
   );
-  const rollCallDate = dateFilter || format(new Date(), 'yyyy-MM-dd');
+  const rollCallDate =
+    variant === 'rollCall'
+      ? rollCallListDate
+      : dateFilter || format(new Date(), 'yyyy-MM-dd');
   const { data: rollCallRecords = [] } = useAttendanceRollCallsByTurmaDate(
     business?.id ?? '',
     selectedRollCallTurma?.id ?? '',
@@ -392,6 +412,15 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
   }, [variant, turmas, selectedRollCallTurmaId]);
 
   useEffect(() => {
+    if (variant !== 'rollCall' || !selectedRollCallTurmaId) return;
+    const turma = turmas.find((t) => t.id === selectedRollCallTurmaId);
+    if (!turma?.schedules?.length) return;
+    setRollCallListDate((prev) =>
+      isClassDayForTurma(turma, prev) ? prev : findNearestClassDate(turma, prev) || prev,
+    );
+  }, [variant, selectedRollCallTurmaId, turmas]);
+
+  useEffect(() => {
     const loadInventory = async () => {
       if (!business?.id) return;
       try {
@@ -491,7 +520,7 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
 
   const pageSubtitle =
     variant === 'rollCall'
-      ? 'Acompanhe presença e situação das aulas em lista.'
+      ? 'Chamada por turma: use apenas dias em que a turma tem aula na grade (inclui datas passadas para consulta ou correção).'
       : variant === 'preEnrollment'
         ? 'Veja as aulas previstas no mês e gerencie remarcações de aulas experimentais.'
         : 'Gerencie todos os agendamentos';
@@ -502,9 +531,9 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
   const showDefaultBookingCalendar =
     !isPreEnrollment && view === 'calendar' && variant !== 'rollCall';
   const showRollCallListPanel = variant === 'rollCall' && view === 'list';
+  const showRescheduleReviewPanel = isPreEnrollment && preEnrollmentTab === 'reschedules';
   const showBookingsDataTable =
-    (variant === 'default' && view === 'list') ||
-    (isPreEnrollment && preEnrollmentTab === 'reschedules');
+    variant === 'default' && view === 'list';
 
   const colPerson = isEducation ? 'Aluno' : 'Cliente';
   const colService = isEducation ? 'Aula' : 'Serviço';
@@ -674,36 +703,40 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
               ))}
             </select>
           )}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as BookingStatus | 'all')}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-          >
-            <option value="all">Todos os status</option>
-            <option value="pending">Pendente</option>
-            <option value="confirmed">Confirmado</option>
-            <option value="completed">Concluído</option>
-            <option value="cancelled">Cancelado</option>
-            <option value="no_show">Não compareceu</option>
-          </select>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-            />
-            {dateFilter && (
-              <button
-                type="button"
-                onClick={() => setDateFilter('')}
-                className="text-sm text-neutral-600 hover:text-neutral-900"
+          {variant !== 'rollCall' && (
+            <>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as BookingStatus | 'all')}
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
               >
-                Todas
-              </button>
-            )}
-          </div>
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendente</option>
+                <option value="confirmed">Confirmado</option>
+                <option value="completed">Concluído</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="no_show">Não compareceu</option>
+              </select>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+                {dateFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setDateFilter('')}
+                    className="text-sm text-neutral-600 hover:text-neutral-900"
+                  >
+                    Todas
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="flex gap-2">
             <button
@@ -1033,17 +1066,65 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white lg:col-span-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 px-4 py-3">
+            <div className="flex flex-col gap-3 border-b border-neutral-200 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-medium text-neutral-900">
                   {selectedRollCallTurma ? `Chamada - ${selectedRollCallTurma.name}` : 'Selecione uma turma'}
                 </h3>
-                <p className="text-xs text-neutral-500">Data da chamada: {format(new Date(`${rollCallDate}T00:00:00`), 'dd/MM/yyyy')}</p>
+                <p className="text-xs text-neutral-500">
+                  Data da chamada: {format(new Date(`${rollCallDate}T12:00:00`), 'dd/MM/yyyy')}
+                </p>
+                {selectedRollCallTurma && selectedRollCallTurma.schedules?.length ? (
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Dias com aula nesta turma: {formatTurmaClassWeekdaysShort(selectedRollCallTurma)}
+                  </p>
+                ) : null}
               </div>
+              {selectedRollCallTurma && selectedRollCallTurma.schedules?.length ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prev = stepClassDate(selectedRollCallTurma, rollCallListDate, -1);
+                      if (prev) setRollCallListDate(prev);
+                    }}
+                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
+                  >
+                    Dia de aula anterior
+                  </button>
+                  <input
+                    type="date"
+                    value={rollCallListDate}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v || !selectedRollCallTurma) return;
+                      if (isClassDayForTurma(selectedRollCallTurma, v)) {
+                        setRollCallListDate(v);
+                      }
+                    }}
+                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = stepClassDate(selectedRollCallTurma, rollCallListDate, 1);
+                      if (next) setRollCallListDate(next);
+                    }}
+                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
+                  >
+                    Próximo dia de aula
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {!selectedRollCallTurma ? (
               <div className="p-8 text-center text-neutral-500">Escolha uma turma para iniciar a chamada.</div>
+            ) : !selectedRollCallTurma.schedules?.length ? (
+              <div className="p-8 text-center text-sm text-neutral-500">
+                Esta turma não tem dias e horários cadastrados. Defina a grade em{' '}
+                <span className="font-medium text-neutral-700">Turmas</span> para habilitar a chamada.
+              </div>
             ) : selectedRollCallStudents.length === 0 ? (
               <div className="p-8 text-center text-neutral-500">
                 Esta turma ainda não possui alunos vinculados.
@@ -1095,6 +1176,14 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
             )}
           </div>
         </div>
+      )}
+
+      {showRescheduleReviewPanel && (
+        <RescheduleRequestsReviewPanel
+          businessId={business.id}
+          title="Remarcações de faltas"
+          description="Aprove ou reprovar solicitações enviadas pelos alunos."
+        />
       )}
 
       {showBookingsDataTable && (

@@ -14,11 +14,13 @@ import {
 import { useEmrsForPatient } from '@/lib/queries/emr';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useBusiness } from '@/lib/contexts/BusinessContext';
 import { ensureStudentTuitionSubscription } from '@/lib/student/ensureTuitionSubscription';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { AnamnesisForm as AnamnesisFormType, AnamnesisFormField } from '@/types/anamnesis';
 import { printEmr } from '@/lib/utils/emrPrint';
+import { printPrescription } from '@/lib/utils/prescriptionPrint';
 import { formatPhoneInput } from '@/lib/utils/phone';
 
 function normalizePhone(phone: string | undefined): string {
@@ -38,6 +40,7 @@ interface ProntuarioTabProps {
   saveResponseMutation: ReturnType<typeof useSaveAnamnesisResponse>;
   filledByName?: string;
   filledBy?: string;
+  professionalAddress: string;
 }
 
 function ProntuarioTab({
@@ -51,11 +54,18 @@ function ProntuarioTab({
   saveResponseMutation,
   filledByName,
   filledBy,
+  professionalAddress,
 }: ProntuarioTabProps) {
   const [selectedFormId, setSelectedFormId] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, string | number | boolean | string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [prontuarioSection, setProntuarioSection] = useState<'registros' | 'receituario'>('registros');
+  const [prescriptionDate, setPrescriptionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [professionalName, setProfessionalName] = useState(filledByName || '');
+  const [medications, setMedications] = useState('');
+  const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
 
   const hasRecords = responses.length > 0 || emrs.length > 0;
 
@@ -76,6 +86,12 @@ function ProntuarioTab({
   }, [emrs, responses]);
 
   const selectedForm = selectedFormId ? forms.find((f) => f.id === selectedFormId) : null;
+
+  useEffect(() => {
+    if (!professionalName && filledByName) {
+      setProfessionalName(filledByName);
+    }
+  }, [filledByName, professionalName]);
 
   const setAnswer = (fieldId: string, value: string | number | boolean | string[]) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
@@ -231,6 +247,148 @@ function ProntuarioTab({
 
   return (
     <div className="space-y-6">
+      <div className="flex gap-1 border-b border-neutral-200">
+        <button
+          type="button"
+          onClick={() => setProntuarioSection('registros')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            prontuarioSection === 'registros'
+              ? 'border-neutral-900 text-neutral-900'
+              : 'border-transparent text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Registros clínicos
+        </button>
+        <button
+          type="button"
+          onClick={() => setProntuarioSection('receituario')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            prontuarioSection === 'receituario'
+              ? 'border-neutral-900 text-neutral-900'
+              : 'border-transparent text-neutral-600 hover:text-neutral-900'
+          }`}
+        >
+          Receituário
+        </button>
+      </div>
+
+      {prontuarioSection === 'receituario' && (
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+          <h3 className="text-sm font-medium text-neutral-700 mb-3">Emitir receituário</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Paciente</label>
+              <input
+                type="text"
+                value={patientName}
+                readOnly
+                className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Data da prescrição</label>
+              <input
+                type="date"
+                value={prescriptionDate}
+                onChange={(e) => setPrescriptionDate(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Nome do profissional *</label>
+            <input
+              type="text"
+              value={professionalName}
+              onChange={(e) => setProfessionalName(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              placeholder="Nome completo do profissional"
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Endereço da clínica</label>
+            <textarea
+              value={professionalAddress || 'Endereço não cadastrado em Configurações'}
+              readOnly
+              rows={2}
+              className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Medicamentos e posologia *</label>
+            <textarea
+              value={medications}
+              onChange={(e) => setMedications(e.target.value)}
+              rows={6}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              placeholder={'Exemplo:\n- Amoxicilina 500mg: 1 cápsula de 8/8h por 7 dias\n- Dipirona 500mg: 1 comprimido se dor, até 4x ao dia'}
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Orientações adicionais</label>
+            <textarea
+              value={additionalInstructions}
+              onChange={(e) => setAdditionalInstructions(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              placeholder="Orientações complementares ao paciente (opcional)"
+            />
+          </div>
+
+          {prescriptionError && <p className="mt-3 text-sm text-red-600">{prescriptionError}</p>}
+
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPrescriptionError(null);
+
+                if (!professionalName.trim()) {
+                  setPrescriptionError('Informe o nome do profissional.');
+                  return;
+                }
+
+                if (!medications.trim()) {
+                  setPrescriptionError('Informe ao menos um medicamento para imprimir o receituário.');
+                  return;
+                }
+
+                const safeDate = prescriptionDate ? new Date(`${prescriptionDate}T12:00:00`) : new Date();
+                printPrescription({
+                  patientName,
+                  professionalName: professionalName.trim(),
+                  professionalAddress,
+                  prescribedAt: safeDate,
+                  medications,
+                  additionalInstructions,
+                });
+              }}
+              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            >
+              Imprimir receituário
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMedications('');
+                setAdditionalInstructions('');
+                setPrescriptionDate(format(new Date(), 'yyyy-MM-dd'));
+                setPrescriptionError(null);
+              }}
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {prontuarioSection === 'registros' && (
+        <>
       <div className="flex flex-wrap items-center gap-4">
         <div>
           <h3 className="text-sm font-medium text-neutral-700 mb-2">Preencher anamnese</h3>
@@ -413,6 +571,8 @@ function ProntuarioTab({
           </ul>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -435,6 +595,7 @@ export function CustomerDetailModal({
 }: CustomerDetailModalProps) {
   const personLabelSingular = isClinic ? 'paciente' : isEducation ? 'aluno' : 'cliente';
   const { user, firebaseUser } = useAuth();
+  const { business } = useBusiness();
   const queryClient = useQueryClient();
   const { data: allBookings = [] } = useBookings(businessId);
   const updateCustomer = useUpdateCustomer(businessId);
@@ -545,6 +706,20 @@ export function CustomerDetailModal({
 
   const money = (cents: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+  const professionalAddress = useMemo(() => {
+    const address = business?.address;
+    if (!address) return '';
+
+    const parts = [
+      [address.street, address.number].filter(Boolean).join(', '),
+      address.complement,
+      address.neighborhood,
+      [address.city, address.state].filter(Boolean).join(' - '),
+      address.zipCode,
+    ].filter(Boolean);
+
+    return parts.join(', ');
+  }, [business?.address]);
 
   return (
     <div
@@ -727,6 +902,7 @@ export function CustomerDetailModal({
               saveResponseMutation={saveResponse}
               filledByName={user?.displayName || user?.email || undefined}
               filledBy={user?.id}
+              professionalAddress={professionalAddress}
             />
           )}
 

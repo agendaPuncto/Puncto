@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/stripe/webhooks';
 import { db } from '@/lib/firebaseAdmin';
+import { recordTuitionInvoicePaymentForConnect } from '@/lib/server/tuitionInvoicePaymentRecord';
 import { Timestamp } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
 
@@ -80,97 +81,6 @@ async function patchStudentSubscription(
   return false;
 }
 
-async function getStudentSubscriptionData(
-  businessId: string,
-  stripeSubscriptionId: string
-): Promise<Record<string, unknown> | null> {
-  const col = db.collection('businesses').doc(businessId).collection('studentSubscriptions');
-  const byDoc = await col.doc(stripeSubscriptionId).get();
-  if (byDoc.exists) return byDoc.data() as Record<string, unknown>;
-  const q = await col.where('stripeSubscriptionId', '==', stripeSubscriptionId).limit(1).get();
-  if (!q.empty) return q.docs[0].data() as Record<string, unknown>;
-  return null;
-}
-
-/** Registra linha em `payments` para o histórico do admin (mensalidade paga). */
-async function recordTuitionInvoicePayment(
-  businessId: string,
-  invoice: Stripe.Invoice,
-  stripeSubscriptionId: string
-) {
-  const inv = invoice as Stripe.Invoice & {
-    payment_intent?: string | Stripe.PaymentIntent | null;
-    customer_email?: string | null;
-    amount_paid?: number;
-    amount_due?: number;
-  };
-
-  const subData = await getStudentSubscriptionData(businessId, stripeSubscriptionId);
-  if (!subData) {
-    return;
-  }
-
-  const customerId = typeof subData.customerId === 'string' ? subData.customerId : undefined;
-  let customerName: string | undefined;
-  let customerEmail: string | undefined;
-  if (customerId) {
-    const custSnap = await db.collection('businesses').doc(businessId).collection('customers').doc(customerId).get();
-    if (custSnap.exists) {
-      const d = custSnap.data() as { firstName?: string; lastName?: string; email?: string };
-      customerName = `${d.firstName || ''} ${d.lastName || ''}`.trim() || undefined;
-      customerEmail = d.email || undefined;
-    }
-  }
-
-  const tuitionTypeId = typeof subData.tuitionTypeId === 'string' ? subData.tuitionTypeId : undefined;
-  const tuitionTypeName = typeof subData.tuitionTypeName === 'string' ? subData.tuitionTypeName : undefined;
-
-  const paymentsRef = db.collection('businesses').doc(businessId).collection('payments');
-  const existing = await paymentsRef.where('stripeInvoiceId', '==', invoice.id).limit(1).get();
-  if (!existing.empty) {
-    return;
-  }
-
-  const amountPaid =
-    typeof inv.amount_paid === 'number' && inv.amount_paid > 0
-      ? inv.amount_paid
-      : typeof inv.amount_due === 'number'
-        ? inv.amount_due
-        : 0;
-  const pi = inv.payment_intent;
-  const paymentIntentId =
-    typeof pi === 'string' ? pi : pi && typeof pi === 'object' && 'id' in pi ? (pi as Stripe.PaymentIntent).id : undefined;
-
-  const description = tuitionTypeName ? `Mensalidade — ${tuitionTypeName}` : 'Mensalidade escolar';
-
-  await paymentsRef.add(
-    stripUndefined({
-      businessId,
-      customerId,
-      customerName,
-      customerEmail: customerEmail || (typeof inv.customer_email === 'string' ? inv.customer_email : undefined),
-      amount: amountPaid,
-      currency: (inv.currency || 'brl').toLowerCase(),
-      status: 'succeeded',
-      paymentMethod: 'card',
-      stripeInvoiceId: inv.id,
-      stripeSubscriptionId,
-      stripePaymentIntentId: paymentIntentId,
-      tuitionTypeId,
-      tuitionTypeName,
-      description,
-      metadata: {
-        source: 'stripe_invoice_tuition',
-        ...(tuitionTypeId ? { tuitionTypeId } : {}),
-        ...(tuitionTypeName ? { tuitionTypeName } : {}),
-      },
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      succeededAt: Timestamp.now(),
-    })
-  );
-}
-
 function subscriptionPeriodToFirestore(sub: Stripe.Subscription): {
   currentPeriodStart?: ReturnType<typeof Timestamp.fromMillis>;
   currentPeriodEnd?: ReturnType<typeof Timestamp.fromMillis>;
@@ -184,7 +94,11 @@ function subscriptionPeriodToFirestore(sub: Stripe.Subscription): {
   };
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice, businessId: string) {
+async function handleInvoicePaid(
+  invoice: Stripe.Invoice,
+  businessId: string,
+  stripeAccount: string,
+) {
   const stripeSubscriptionId = getStripeSubscriptionIdFromInvoice(invoice);
   if (!stripeSubscriptionId) {
     console.log('[webhooks/stripe] invoice.paid sem subscription — ignorado');
@@ -201,7 +115,12 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, businessId: string) {
     ...(periodEnd ? { currentPeriodEnd: periodEnd } : {}),
   });
 
-  await recordTuitionInvoicePayment(businessId, invoice, stripeSubscriptionId);
+  await recordTuitionInvoicePaymentForConnect({
+    businessId,
+    invoice,
+    stripeSubscriptionId,
+    stripeAccount,
+  });
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, businessId: string) {
@@ -259,9 +178,10 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-      case 'invoice.paid': {
+      case 'invoice.paid':
+      case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        await handleInvoicePaid(invoice, businessId);
+        await handleInvoicePaid(invoice, businessId, connectedAccountId);
         break;
       }
       case 'invoice.payment_failed': {

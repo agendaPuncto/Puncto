@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, db } from '@/lib/firebaseAdmin';
+import { recordTuitionInvoicePaymentForConnect } from '@/lib/server/tuitionInvoicePaymentRecord';
 import { stripe } from '@/lib/stripe/client';
 import { Timestamp } from 'firebase-admin/firestore';
 import type Stripe from 'stripe';
 
-type Action = 'create' | 'cancel' | 'portal' | 'prepare_incomplete_payment';
+type Action = 'create' | 'cancel' | 'portal' | 'prepare_incomplete_payment' | 'sync_from_stripe';
 
 /** Campos legados / expand — tipos Stripe nem sempre expõem payment_intent no Invoice raiz. */
 type InvoiceWithPaymentIntent = Stripe.Invoice & {
@@ -448,6 +449,82 @@ export async function POST(request: NextRequest) {
       }
       await subRef.set({ cancelAtPeriodEnd: true, updatedAt: Timestamp.now() }, { merge: true });
       return NextResponse.json({ success: true });
+    }
+
+    if (action === 'sync_from_stripe') {
+      if (!isStudent) {
+        return NextResponse.json({ error: 'Apenas o aluno pode sincronizar o status' }, { status: 403 });
+      }
+      if (actor.studentBusinessId !== businessId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const customerId = actor.studentCustomerId;
+      if (!customerId || typeof customerId !== 'string') {
+        return NextResponse.json({ error: 'Conta sem vinculo de aluno' }, { status: 400 });
+      }
+
+      const col = db.collection('businesses').doc(businessId).collection('studentSubscriptions');
+      const snap = await col.where('customerId', '==', customerId).get();
+      const updated: string[] = [];
+
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() as { stripeSubscriptionId?: string };
+        const stripeSubId =
+          typeof d.stripeSubscriptionId === 'string' && d.stripeSubscriptionId.startsWith('sub_')
+            ? d.stripeSubscriptionId
+            : docSnap.id.startsWith('sub_')
+              ? docSnap.id
+              : null;
+        if (!stripeSubId) continue;
+
+        try {
+          const sub = await stripe.subscriptions.retrieve(stripeSubId, {}, { stripeAccount });
+          const ext = sub as Stripe.Subscription & { current_period_start?: number; current_period_end?: number };
+          const periodPatch: Record<string, unknown> = {};
+          if (typeof ext.current_period_start === 'number') {
+            periodPatch.currentPeriodStart = Timestamp.fromMillis(ext.current_period_start * 1000);
+          }
+          if (typeof ext.current_period_end === 'number') {
+            periodPatch.currentPeriodEnd = Timestamp.fromMillis(ext.current_period_end * 1000);
+          }
+
+          await docSnap.ref.set(
+            {
+              status: sub.status,
+              cancelAtPeriodEnd: sub.cancel_at_period_end === true,
+              ...periodPatch,
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true },
+          );
+          updated.push(stripeSubId);
+
+          if (sub.status === 'active' || sub.status === 'trialing') {
+            const li = sub.latest_invoice;
+            const invId =
+              typeof li === 'string' ? li : li && typeof li === 'object' && 'id' in li ? (li as Stripe.Invoice).id : null;
+            if (invId) {
+              try {
+                const inv = await stripe.invoices.retrieve(invId, { expand: ['payment_intent'] }, { stripeAccount });
+                if (inv.status === 'paid') {
+                  await recordTuitionInvoicePaymentForConnect({
+                    businessId,
+                    invoice: inv,
+                    stripeSubscriptionId: stripeSubId,
+                    stripeAccount,
+                  });
+                }
+              } catch (e) {
+                console.warn('[students/subscriptions/manage] sync_from_stripe pagamento', invId, e);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[students/subscriptions/manage] sync_from_stripe falhou para', stripeSubId, e);
+        }
+      }
+
+      return NextResponse.json({ success: true, updated });
     }
 
     if (action === 'portal') {
