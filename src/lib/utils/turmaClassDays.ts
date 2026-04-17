@@ -38,6 +38,21 @@ export function isClassDayForTurma(turma: Pick<Turma, 'schedules'>, yyyyMmDd: st
   return weekdays.has(dt.getDay());
 }
 
+/** O horário coincide com algum slot da turma no dia (weekday de yyyy-mm-dd). */
+export function turmaScheduleMatchesTimeOnDate(
+  turma: Pick<Turma, 'schedules'>,
+  yyyyMmDd: string,
+  startTime: string,
+  endTime: string,
+): boolean {
+  const dt = parseLocalYyyyMmDd(yyyyMmDd);
+  if (!dt) return false;
+  const wd = dt.getDay();
+  return (turma.schedules || []).some(
+    (s) => s.weekday === wd && s.startTime === startTime && s.endTime === endTime,
+  );
+}
+
 /** Human-readable list e.g. "Segunda, Quarta". */
 export function formatTurmaClassWeekdaysShort(turma: Pick<Turma, 'schedules'>): string {
   const set = getTurmaScheduledWeekdays(turma);

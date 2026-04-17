@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { addDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getStudentCustomerId } from '@/lib/student/studentSession';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
@@ -11,7 +13,48 @@ import {
   useCreateRescheduleRequest,
   useStudentRescheduleRequests,
 } from '@/lib/queries/lessonReschedules';
-import type { AttendanceRollCall } from '@/types/attendance';
+import { auth } from '@/lib/firebase';
+import type { AttendanceRollCall, RollCallStatus } from '@/types/attendance';
+
+type ReplacementSlotCatalog = {
+  turmas: Array<{
+    turmaId: string;
+    name: string;
+    professionalId?: string;
+    schedules: Array<{ weekday: number; startTime: string; endTime: string }>;
+  }>;
+};
+
+function isIsoDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function formatDateBr(iso: string) {
+  if (!isIsoDate(iso)) return iso;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function rollCallStatusLabel(status: RollCallStatus) {
+  if (status === 'pending') return 'Pendente';
+  if (status === 'present') return 'Presente';
+  if (status === 'absent') return 'Falta';
+  if (status === 'justified') return 'Justificada';
+  return status;
+}
+
+async function fetchReplacementSlotCatalog(businessId: string): Promise<ReplacementSlotCatalog> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+  const token = await user.getIdToken();
+  const res = await fetch(
+    `/api/students/reschedules/available-slots?businessId=${encodeURIComponent(businessId)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  const data = (await res.json().catch(() => ({}))) as ReplacementSlotCatalog & { error?: string };
+  if (!res.ok) throw new Error(data.error || 'Não foi possível carregar os horários disponíveis.');
+  return { turmas: data.turmas || [] };
+}
 
 export default function StudentFaltasPage() {
   const { user } = useAuth();
@@ -29,11 +72,23 @@ export default function StudentFaltasPage() {
   const cancelRequest = useCancelRescheduleRequest(business.id);
   const [selectedAttendance, setSelectedAttendance] = useState<AttendanceRollCall | null>(null);
   const [requestedDate, setRequestedDate] = useState('');
-  const [requestedSlot, setRequestedSlot] = useState('');
+  const [selectedSlotKey, setSelectedSlotKey] = useState('');
   const [requestReason, setRequestReason] = useState('');
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const turmaById = useMemo(() => Object.fromEntries(turmas.map((t) => [t.id, t])), [turmas]);
+
+  const {
+    data: slotCatalog,
+    isLoading: slotsLoading,
+    isError: slotsFailed,
+    error: slotsError,
+  } = useQuery({
+    queryKey: ['replacementSlotCatalog', business.id],
+    queryFn: () => fetchReplacementSlotCatalog(business.id),
+    enabled: !!selectedAttendance && !!business.id,
+    staleTime: 60_000,
+  });
 
   const requestByAttendanceId = useMemo(() => {
     const map = new Map<string, (typeof requests)[number]>();
@@ -45,25 +100,58 @@ export default function StudentFaltasPage() {
     return map;
   }, [requests]);
 
-  const selectedTurma = selectedAttendance ? turmaById[selectedAttendance.turmaId] : null;
-  const selectedSlots = selectedTurma?.schedules || [];
+  const weekdayOfSelectedDate = useMemo(() => {
+    if (!requestedDate || !isIsoDate(requestedDate)) return null;
+    return new Date(`${requestedDate}T12:00:00`).getDay();
+  }, [requestedDate]);
+
+  const slotOptions = useMemo(() => {
+    if (weekdayOfSelectedDate == null || !slotCatalog?.turmas?.length) return [];
+    const out: Array<{
+      key: string;
+      label: string;
+      turmaId: string;
+      startTime: string;
+      endTime: string;
+      professionalId?: string;
+    }> = [];
+    for (const t of slotCatalog.turmas) {
+      for (const s of t.schedules) {
+        if (s.weekday !== weekdayOfSelectedDate) continue;
+        out.push({
+          key: `${t.turmaId}|${s.startTime}|${s.endTime}`,
+          label: `${t.name} • ${s.startTime} – ${s.endTime}`,
+          turmaId: t.turmaId,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          professionalId: t.professionalId,
+        });
+      }
+    }
+    out.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+    return out;
+  }, [slotCatalog, weekdayOfSelectedDate]);
+
+  useEffect(() => {
+    if (!selectedAttendance) return;
+    setSelectedSlotKey((prev) => {
+      if (prev && slotOptions.some((o) => o.key === prev)) return prev;
+      return slotOptions[0]?.key ?? '';
+    });
+  }, [selectedAttendance, slotOptions]);
 
   const openRequestModal = (record: AttendanceRollCall) => {
     setSelectedAttendance(record);
     setRequestReason('');
     setRequestError(null);
-    const turma = turmaById[record.turmaId];
-    const firstSlot = turma?.schedules?.[0];
-    setRequestedSlot(
-      firstSlot ? `${firstSlot.startTime}-${firstSlot.endTime}` : '',
-    );
+    setSelectedSlotKey('');
     setRequestedDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   };
 
   const closeRequestModal = () => {
     setSelectedAttendance(null);
     setRequestedDate('');
-    setRequestedSlot('');
+    setSelectedSlotKey('');
     setRequestReason('');
     setRequestError(null);
   };
@@ -86,22 +174,23 @@ export default function StudentFaltasPage() {
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAttendance) return;
-    if (!requestedDate || !requestedSlot) {
+    if (!requestedDate || !selectedSlotKey) {
       setRequestError('Selecione data e horário para solicitar a reposição.');
       return;
     }
-    const [requestedStartTime, requestedEndTime] = requestedSlot.split('-');
-    if (!requestedStartTime || !requestedEndTime) {
-      setRequestError('Horário inválido.');
+    const choice = slotOptions.find((o) => o.key === selectedSlotKey);
+    if (!choice) {
+      setRequestError('Selecione um horário válido na lista.');
       return;
     }
     try {
       await createRequest.mutateAsync({
         attendanceRollCallId: selectedAttendance.id,
+        targetTurmaId: choice.turmaId,
         requestedDate,
-        requestedStartTime,
-        requestedEndTime,
-        professionalId: selectedTurma?.professionalId,
+        requestedStartTime: choice.startTime,
+        requestedEndTime: choice.endTime,
+        professionalId: choice.professionalId,
         reason: requestReason.trim() || undefined,
       });
       await refetchRequests();
@@ -110,6 +199,11 @@ export default function StudentFaltasPage() {
       setRequestError(error instanceof Error ? error.message : 'Erro ao criar solicitação.');
     }
   };
+
+  const dateHint =
+    requestedDate && isIsoDate(requestedDate)
+      ? format(new Date(`${requestedDate}T12:00:00`), "EEEE, dd/MM/yyyy", { locale: ptBR })
+      : null;
 
   return (
     <div className="space-y-5">
@@ -140,15 +234,15 @@ export default function StudentFaltasPage() {
             <tbody>
               {attendance.map((r) => (
                 <tr key={r.id} className="border-t border-neutral-100">
-                  <td className="px-4 py-2">{r.date}</td>
+                  <td className="px-4 py-2">{formatDateBr(r.date)}</td>
                   <td className="px-4 py-2">{turmaById[r.turmaId]?.name || r.turmaId}</td>
-                  <td className="px-4 py-2">{r.status}</td>
+                  <td className="px-4 py-2">{rollCallStatusLabel(r.status)}</td>
                   <td className="px-4 py-2 text-xs text-neutral-600">
                     {requestByAttendanceId.get(r.id) ? (
                       <div>
                         <p>{rescheduleStatusLabel(requestByAttendanceId.get(r.id)!.status)}</p>
                         <p>
-                          {requestByAttendanceId.get(r.id)!.requestedDate} •{' '}
+                          {formatDateBr(requestByAttendanceId.get(r.id)!.requestedDate)} •{' '}
                           {requestByAttendanceId.get(r.id)!.requestedStartTime} -{' '}
                           {requestByAttendanceId.get(r.id)!.requestedEndTime}
                         </p>
@@ -206,7 +300,11 @@ export default function StudentFaltasPage() {
               Solicitar reposição
             </h2>
             <p className="mt-1 text-sm text-neutral-600">
-              Falta em {selectedAttendance.date} • {turmaById[selectedAttendance.turmaId]?.name || 'Turma'}
+              Falta em {formatDateBr(selectedAttendance.date)} •{' '}
+              {turmaById[selectedAttendance.turmaId]?.name || 'Turma'}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Escolha uma data e um horário entre as turmas com vaga (abaixo do limite de alunos).
             </p>
 
             <form onSubmit={submitRequest} className="mt-4 space-y-4">
@@ -216,27 +314,54 @@ export default function StudentFaltasPage() {
                   type="date"
                   value={requestedDate}
                   min={format(new Date(), 'yyyy-MM-dd')}
-                  onChange={(e) => setRequestedDate(e.target.value)}
+                  onChange={(e) => {
+                    setRequestedDate(e.target.value);
+                    setSelectedSlotKey('');
+                  }}
                   className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
                 />
+                {dateHint && (
+                  <p className="mt-1 text-xs capitalize text-neutral-500">{dateHint}</p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700">Horário da turma</label>
-                <select
-                  value={requestedSlot}
-                  onChange={(e) => setRequestedSlot(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Selecione um horário...</option>
-                  {selectedSlots.map((slot, idx) => (
-                    <option
-                      key={`${slot.weekday}-${slot.startTime}-${slot.endTime}-${idx}`}
-                      value={`${slot.startTime}-${slot.endTime}`}
-                    >
-                      {slot.startTime} - {slot.endTime}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-neutral-700">
+                  Turma e horário (com vaga neste dia)
+                </label>
+                {slotsLoading ? (
+                  <p className="mt-2 text-sm text-neutral-500">Carregando turmas e horários...</p>
+                ) : slotsFailed ? (
+                  <p className="mt-2 text-sm text-red-600">
+                    {slotsError instanceof Error ? slotsError.message : 'Erro ao carregar horários.'}
+                  </p>
+                ) : (
+                  <select
+                    value={selectedSlotKey}
+                    onChange={(e) => setSelectedSlotKey(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">Selecione turma e horário...</option>
+                    {slotOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {!slotsLoading && !slotsFailed && slotCatalog?.turmas?.length === 0 && (
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Não há turmas com vaga no momento. Peça à escola para ajustar vagas ou turmas.
+                  </p>
+                )}
+                {!slotsLoading &&
+                  !slotsFailed &&
+                  (slotCatalog?.turmas?.length ?? 0) > 0 &&
+                  slotOptions.length === 0 &&
+                  requestedDate && (
+                    <p className="mt-2 text-xs text-neutral-500">
+                      Nenhuma turma com vaga oferece aula neste dia da semana. Escolha outra data.
+                    </p>
+                  )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Observação (opcional)</label>
@@ -259,7 +384,7 @@ export default function StudentFaltasPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createRequest.isPending}
+                  disabled={createRequest.isPending || slotsLoading || !selectedSlotKey}
                   className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
                 >
                   {createRequest.isPending ? 'Enviando...' : 'Enviar solicitação'}

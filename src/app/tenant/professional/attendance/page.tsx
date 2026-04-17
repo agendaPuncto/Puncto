@@ -15,6 +15,8 @@ import { useProfessionals } from '@/lib/queries/professionals';
 import { useTurmas } from '@/lib/queries/turmas';
 import { useCustomers } from '@/lib/queries/customers';
 import { useAttendanceRollCallsByTurmaDate, useUpsertAttendanceRollCall } from '@/lib/queries/attendance';
+import { useLessonRescheduleRequestsForTurmaDate } from '@/lib/queries/lessonReschedules';
+import { buildRollCallRowsWithReplacementGuests } from '@/lib/education/rollCallStudents';
 import { RescheduleRequestsReviewPanel } from '@/components/education/RescheduleRequestsReviewPanel';
 import type { RollCallStatus } from '@/types/attendance';
 
@@ -56,13 +58,31 @@ function ProfessionalAttendanceContent() {
     return m;
   }, [rollCallRecords]);
 
+  const { data: rollCallDayRescheduleRequests = [] } = useLessonRescheduleRequestsForTurmaDate(
+    business?.id ?? '',
+    selectedTurma?.id ?? '',
+    rollCallDate,
+  );
+
+  const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
+
   const selectedStudents = useMemo(() => {
     if (!selectedTurma) return [];
-    const byId = new Map(customers.map((c) => [c.id, c]));
     return selectedTurma.studentIds
-      .map((studentId) => byId.get(studentId))
+      .map((studentId) => customerById.get(studentId))
       .filter((c): c is NonNullable<typeof c> => !!c);
-  }, [customers, selectedTurma]);
+  }, [customerById, selectedTurma]);
+
+  const rollCallDisplayRows = useMemo(() => {
+    if (!selectedTurma) return [];
+    return buildRollCallRowsWithReplacementGuests(
+      selectedTurma,
+      rollCallDate,
+      selectedStudents,
+      rollCallDayRescheduleRequests,
+      customerById,
+    );
+  }, [selectedTurma, rollCallDate, selectedStudents, rollCallDayRescheduleRequests, customerById]);
 
   useEffect(() => {
     const t = searchParams.get('t') || searchParams.get('turmaId');
@@ -247,7 +267,7 @@ function ProfessionalAttendanceContent() {
                 Esta turma não tem horários na grade. Peça ao administrador para cadastrar os dias de aula em{' '}
                 <span className="font-medium text-neutral-700">Turmas</span>.
               </div>
-            ) : selectedStudents.length === 0 ? (
+            ) : rollCallDisplayRows.length === 0 ? (
               <div className="p-8 text-center text-neutral-500">
                 Esta turma ainda não possui alunos vinculados.
               </div>
@@ -265,7 +285,7 @@ function ProfessionalAttendanceContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200">
-                    {selectedStudents.map((student) => {
+                    {rollCallDisplayRows.map(({ student, isReplacementGuest }) => {
                       const status = rollCallStatusByStudentId.get(student.id) || 'pending';
                       const statusButton = (value: RollCallStatus, label: string, activeClass: string) => (
                         <button
@@ -284,7 +304,14 @@ function ProfessionalAttendanceContent() {
                       return (
                         <tr key={student.id}>
                           <td className="px-4 py-3 text-sm font-medium text-neutral-900">
-                            {student.firstName} {student.lastName}
+                            <span>
+                              {student.firstName} {student.lastName}
+                            </span>
+                            {isReplacementGuest && (
+                              <span className="ml-2 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
+                                Remarcação
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">

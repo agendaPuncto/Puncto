@@ -22,6 +22,8 @@ type ManageBody = {
   action?: Action;
   businessId?: string;
   attendanceRollCallId?: string;
+  /** Turma onde o aluno quer a reposição (grade/horário). Default: turma da falta. */
+  targetTurmaId?: string;
   requestId?: string;
   requestedDate?: string;
   requestedStartTime?: string;
@@ -46,6 +48,13 @@ function timeToMinutes(value: string) {
 
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
   return aStart < bEnd && bStart < aEnd;
+}
+
+function turmaHasCapacity(studentIds: unknown, maxStudents: unknown) {
+  const n = Array.isArray(studentIds) ? studentIds.length : 0;
+  const max = typeof maxStudents === 'number' ? maxStudents : undefined;
+  if (max == null || max <= 0) return true;
+  return n < max;
 }
 
 function isBlockedByUnavailability(
@@ -191,17 +200,34 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const turmaRef = businessRef.collection('turmas').doc(attendance.turmaId);
+      const targetTurmaId =
+        typeof body.targetTurmaId === 'string' && body.targetTurmaId.trim()
+          ? body.targetTurmaId.trim()
+          : attendance.turmaId;
+      if (!targetTurmaId) {
+        return NextResponse.json({ error: 'Turma alvo invalida' }, { status: 400 });
+      }
+
+      const turmaRef = businessRef.collection('turmas').doc(targetTurmaId);
       const turmaSnap = await turmaRef.get();
       if (!turmaSnap.exists) return NextResponse.json({ error: 'Turma nao encontrada' }, { status: 404 });
       const turmaData = turmaSnap.data() as {
         studentIds?: string[];
         professionalId?: string;
+        maxStudents?: number;
         schedules?: Array<{ weekday?: number; startTime?: string; endTime?: string }>;
       };
 
-      if (!Array.isArray(turmaData.studentIds) || !turmaData.studentIds.includes(studentId)) {
-        return NextResponse.json({ error: 'Aluno nao pertence a esta turma' }, { status: 403 });
+      if (!turmaHasCapacity(turmaData.studentIds, turmaData.maxStudents)) {
+        return NextResponse.json({ error: 'Turma sem vagas para reposicao' }, { status: 409 });
+      }
+
+      const enrolledInTarget =
+        Array.isArray(turmaData.studentIds) && turmaData.studentIds.includes(studentId);
+      if (targetTurmaId === attendance.turmaId) {
+        if (!enrolledInTarget) {
+          return NextResponse.json({ error: 'Aluno nao pertence a esta turma' }, { status: 403 });
+        }
       }
 
       const requestedWeekday = new Date(`${requestedDate}T12:00:00`).getDay();
@@ -224,7 +250,7 @@ export async function POST(request: NextRequest) {
       await requestRef.set({
         businessId,
         attendanceRollCallId,
-        turmaId: attendance.turmaId,
+        turmaId: targetTurmaId,
         studentId,
         requestedDate,
         requestedStartTime,

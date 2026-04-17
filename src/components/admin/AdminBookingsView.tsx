@@ -9,6 +9,8 @@ import { useCustomers } from '@/lib/queries/customers';
 import { useProfessionals } from '@/lib/queries/professionals';
 import { useServices } from '@/lib/queries/services';
 import { useAttendanceRollCallsByTurmaDate, useUpsertAttendanceRollCall } from '@/lib/queries/attendance';
+import { useLessonRescheduleRequestsForTurmaDate } from '@/lib/queries/lessonReschedules';
+import { buildRollCallRowsWithReplacementGuests } from '@/lib/education/rollCallStudents';
 import { useTurmas } from '@/lib/queries/turmas';
 import { BookingCalendar } from '@/components/admin/BookingCalendar';
 import { RescheduleRequestsReviewPanel } from '@/components/education/RescheduleRequestsReviewPanel';
@@ -129,6 +131,12 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
     for (const rec of rollCallRecords) m.set(rec.studentId, rec.status);
     return m;
   }, [rollCallRecords]);
+
+  const { data: rollCallDayRescheduleRequests = [] } = useLessonRescheduleRequestsForTurmaDate(
+    business?.id ?? '',
+    selectedRollCallTurma?.id ?? '',
+    rollCallDate,
+  );
 
   const filteredBookings =
     bookings?.filter((booking) => {
@@ -542,13 +550,31 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
       ? 'Nenhum registro na lista de chamada'
       : 'Nenhum agendamento encontrado';
 
+  const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
+
   const selectedRollCallStudents = useMemo(() => {
     if (!selectedRollCallTurma) return [];
-    const byId = new Map(customers.map((c) => [c.id, c]));
     return selectedRollCallTurma.studentIds
-      .map((studentId) => byId.get(studentId))
+      .map((studentId) => customerById.get(studentId))
       .filter((c): c is NonNullable<typeof c> => !!c);
-  }, [customers, selectedRollCallTurma]);
+  }, [customerById, selectedRollCallTurma]);
+
+  const rollCallDisplayRows = useMemo(() => {
+    if (!selectedRollCallTurma) return [];
+    return buildRollCallRowsWithReplacementGuests(
+      selectedRollCallTurma,
+      rollCallDate,
+      selectedRollCallStudents,
+      rollCallDayRescheduleRequests,
+      customerById,
+    );
+  }, [
+    selectedRollCallTurma,
+    rollCallDate,
+    selectedRollCallStudents,
+    rollCallDayRescheduleRequests,
+    customerById,
+  ]);
 
   const markRollCall = async (studentId: string, status: RollCallStatus) => {
     if (!selectedRollCallTurma) return;
@@ -1125,7 +1151,7 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                 Esta turma não tem dias e horários cadastrados. Defina a grade em{' '}
                 <span className="font-medium text-neutral-700">Turmas</span> para habilitar a chamada.
               </div>
-            ) : selectedRollCallStudents.length === 0 ? (
+            ) : rollCallDisplayRows.length === 0 ? (
               <div className="p-8 text-center text-neutral-500">
                 Esta turma ainda não possui alunos vinculados.
               </div>
@@ -1139,7 +1165,7 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200">
-                    {selectedRollCallStudents.map((student) => {
+                    {rollCallDisplayRows.map(({ student, isReplacementGuest }) => {
                       const status = rollCallStatusByStudentId.get(student.id) || 'pending';
                       const statusButton = (value: RollCallStatus, label: string, activeClass: string) => (
                         <button
@@ -1157,7 +1183,14 @@ export function AdminBookingsView({ variant: variantProp }: AdminBookingsViewPro
                       return (
                         <tr key={student.id}>
                           <td className="px-4 py-3 text-sm font-medium text-neutral-900">
-                            {student.firstName} {student.lastName}
+                            <span>
+                              {student.firstName} {student.lastName}
+                            </span>
+                            {isReplacementGuest && (
+                              <span className="ml-2 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
+                                Remarcação
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">

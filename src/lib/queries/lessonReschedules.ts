@@ -88,6 +88,26 @@ export function useStudentRescheduleRequests(
   });
 }
 
+/** Pedidos de remarcação para uma turma e data (ex.: lista de chamada com visitantes). */
+export function useLessonRescheduleRequestsForTurmaDate(
+  businessId: string,
+  turmaId: string,
+  date: string,
+) {
+  return useQuery({
+    queryKey: ['lessonRescheduleRequests', 'byTurmaDate', businessId, turmaId, date],
+    enabled: !!businessId && !!turmaId && !!date,
+    queryFn: async () => {
+      const ref = collection(db, 'businesses', businessId, 'lessonRescheduleRequests');
+      const q = query(ref, where('turmaId', '==', turmaId), where('requestedDate', '==', date));
+      const snap = await getDocs(q);
+      return snap.docs.map((docSnap) =>
+        mapDoc(docSnap.id, docSnap.data() as Record<string, unknown>),
+      );
+    },
+  });
+}
+
 export function useStaffRescheduleRequests(
   businessId: string,
   options?: {
@@ -125,6 +145,8 @@ export function useCreateRescheduleRequest(businessId: string) {
   return useMutation({
     mutationFn: async (input: {
       attendanceRollCallId: string;
+      /** Turma da grade escolhida para a reposição (opcional: default é a turma da falta). */
+      targetTurmaId?: string;
       requestedDate: string;
       requestedStartTime: string;
       requestedEndTime: string;
@@ -143,6 +165,7 @@ export function useCreateRescheduleRequest(businessId: string) {
         type: 'active',
       });
       queryClient.invalidateQueries({ queryKey: ['studentAttendance', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['replacementSlotCatalog', businessId] });
     },
   });
 }
