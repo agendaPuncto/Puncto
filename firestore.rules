@@ -197,6 +197,45 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Educação: eventos e coletor de cadastros do evento
+      match /events/{eventId} {
+        // Eventos publicados devem aparecer na página pública de pré-cadastro.
+        allow read: if true;
+        allow write: if isBusinessOwner(businessId) ||
+                       hasPermission(businessId, 'manageBookings') ||
+                       isPlatformAdmin();
+
+        match /registrations/{registrationId} {
+          // Pré-cadastro público (site de eventos) com validação mínima de payload.
+          allow create: if request.resource.data.keys().hasOnly([
+                          'eventId',
+                          'name',
+                          'phone',
+                          'email',
+                          'createdAt',
+                          'updatedAt'
+                        ]) &&
+                        request.resource.data.eventId == eventId &&
+                        request.resource.data.name is string &&
+                        request.resource.data.name.size() >= 2 &&
+                        request.resource.data.name.size() <= 120 &&
+                        request.resource.data.phone is string &&
+                        request.resource.data.phone.size() >= 8 &&
+                        request.resource.data.phone.size() <= 30 &&
+                        request.resource.data.email is string &&
+                        request.resource.data.email.size() >= 5 &&
+                        request.resource.data.email.size() <= 200 &&
+                        get(/databases/$(database)/documents/businesses/$(businessId)/events/$(eventId)).data.status == 'active' &&
+                        request.resource.data.createdAt is timestamp &&
+                        request.resource.data.updatedAt is timestamp;
+
+          allow read: if isBusinessStaff(businessId) || isPlatformAdmin();
+          allow update, delete: if isBusinessOwner(businessId) ||
+                                  hasPermission(businessId, 'manageBookings') ||
+                                  isPlatformAdmin();
+        }
+      }
+
       // Clinic: anamnese forms and responses (prontuário)
       match /anamnesis_forms/{formId} {
         allow read: if isBusinessStaff(businessId) || isPlatformAdmin();

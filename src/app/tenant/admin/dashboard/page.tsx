@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
 
       {isEducation && (
         <p className="mt-4 text-sm text-neutral-600">
-          Solicitações de reposição de faltas (aprovadas pelo staff) aparecem em{' '}
+          Solicitações de reposição de faltas aparecem em{' '}
           <Link
             href="/tenant/admin/bookings?tab=reschedules"
             className="font-medium text-neutral-900 underline hover:text-neutral-700"
