@@ -229,14 +229,14 @@ export function IncompleteTuitionPayment({
           <div className="mb-6 flex gap-3 text-sm">
             <div
               className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 ${
-                !showPaymentStep || phase === 'error'
+                !showPaymentStep
                   ? 'border-neutral-900 bg-neutral-900 text-white'
                   : 'border-neutral-200 bg-white text-neutral-600'
               }`}
             >
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  !showPaymentStep || phase === 'error' ? 'bg-white text-neutral-900' : 'bg-neutral-200 text-neutral-700'
+                  !showPaymentStep ? 'bg-white text-neutral-900' : 'bg-neutral-200 text-neutral-700'
                 }`}
               >
                 1
@@ -245,14 +245,14 @@ export function IncompleteTuitionPayment({
             </div>
             <div
               className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 ${
-                showPaymentStep && phase !== 'error'
+                showPaymentStep
                   ? 'border-neutral-900 bg-neutral-50 text-neutral-900'
                   : 'border-neutral-200 bg-neutral-50 text-neutral-400'
               }`}
             >
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  showPaymentStep && phase !== 'error'
+                  showPaymentStep
                     ? 'bg-neutral-900 text-white'
                     : 'bg-neutral-200 text-neutral-500'
                 }`}

@@ -391,7 +391,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent, stripeAccount?: string) {
   let metadata = paymentIntent.metadata || {};
-  let businessId = metadata.businessId;
+  let businessId: string | undefined = metadata.businessId;
   const bookingId = metadata.bookingId;
   let checkoutSessionId: string | undefined;
   let paymentLinkIdFromSession: string | undefined;
@@ -441,7 +441,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent,
 
   if (!businessId) {
     if (stripeAccount) {
-      businessId = (await findBusinessIdByConnectedAccount(stripeAccount)) || undefined;
+      const connectedBusinessId = await findBusinessIdByConnectedAccount(stripeAccount);
+      businessId = connectedBusinessId ?? undefined;
     }
   }
 
@@ -709,9 +710,10 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
 async function handleStudentSubscriptionUpdated(subscription: Stripe.Subscription, stripeAccount?: string) {
   const meta = subscription.metadata || {};
-  let businessId = meta.businessId;
+  let businessId: string | undefined = meta.businessId;
   if (!businessId && stripeAccount) {
-    businessId = await findBusinessIdByConnectedAccount(stripeAccount) || undefined;
+    const connectedBusinessId = await findBusinessIdByConnectedAccount(stripeAccount);
+    businessId = connectedBusinessId ?? undefined;
   }
   if (!businessId) return;
   const customerId = meta.customerId;
@@ -729,9 +731,10 @@ async function handleStudentSubscriptionUpdated(subscription: Stripe.Subscriptio
 
 async function handleInvoicePaid(invoice: Stripe.Invoice, stripeAccount?: string) {
   const inv = invoice as any;
-  let businessId = inv.metadata?.businessId;
+  let businessId: string | undefined = inv.metadata?.businessId;
   if (!businessId && stripeAccount) {
-    businessId = await findBusinessIdByConnectedAccount(stripeAccount) || undefined;
+    const connectedBusinessId = await findBusinessIdByConnectedAccount(stripeAccount);
+    businessId = connectedBusinessId ?? undefined;
   }
   const customerId = inv.metadata?.customerId;
   const subscriptionId =
@@ -795,9 +798,10 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, stripeAccount?: string
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, stripeAccount?: string) {
   const inv = invoice as any;
-  let businessId = inv.metadata?.businessId;
+  let businessId: string | undefined = inv.metadata?.businessId;
   if (!businessId && stripeAccount) {
-    businessId = await findBusinessIdByConnectedAccount(stripeAccount) || undefined;
+    const connectedBusinessId = await findBusinessIdByConnectedAccount(stripeAccount);
+    businessId = connectedBusinessId ?? undefined;
   }
   const customerId = inv.metadata?.customerId;
   const subscriptionId =
