@@ -175,7 +175,7 @@ export async function middleware(request: NextRequest) {
     if (adminPath.startsWith('/tenant/admin')) {
       adminPath = adminPath.slice('/tenant/admin'.length) || '';
     }
-    if (adminPath === '/') adminPath = '';
+    if (adminPath === '/' || adminPath === '') adminPath = '/dashboard';
 
     const gestaoResponse = NextResponse.rewrite(
       new URL(`/tenant/admin${adminPath}${url.search}`, request.url),
