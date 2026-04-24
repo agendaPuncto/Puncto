@@ -6,7 +6,7 @@ import type { Payment } from '@/types/payment';
 type Props = {
   payment: Payment;
   onClose: () => void;
-  formatAmount: (cents: number, currency: string) => string;
+  formatAmount: (cents: number, currency?: string | null) => string;
   formatInstant: (value: unknown) => string;
   statusLabel: (status: string) => string;
 };
@@ -68,7 +68,7 @@ export function PaymentDetailModal({
           <Row label="ID interno" value={payment.id} mono />
           <Row label="Status" value={statusLabel(payment.status)} />
           <Row label="Valor" value={formatAmount(payment.amount, payment.currency)} />
-          <Row label="Moeda" value={payment.currency.toUpperCase()} />
+          <Row label="Moeda" value={(payment.currency ?? 'BRL').toUpperCase()} />
           <Row label="Método" value={String(payment.paymentMethod)} />
           <Row label="Cliente" value={payment.customerName || payment.customerEmail || '—'} />
           {(payment.customerEmail || payment.customerName) && (

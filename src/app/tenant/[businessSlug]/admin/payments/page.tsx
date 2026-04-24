@@ -103,11 +103,13 @@ function PaymentsPage() {
     }
   };
 
-  const formatAmount = (cents: number, currency: string) => {
+  const formatAmount = (cents: number, currency?: string | null) => {
+    const amountCents = typeof cents === 'number' && !Number.isNaN(cents) ? cents : 0;
+    const code = (currency ?? '').trim().toUpperCase() || 'BRL';
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
+      currency: code,
+    }).format(amountCents / 100);
   };
 
   const getStatusColor = (status: string) => {
