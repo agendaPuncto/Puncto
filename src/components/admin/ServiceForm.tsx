@@ -11,9 +11,18 @@ interface ServiceFormProps {
   categories?: { id: string; name: string }[];
   onSubmit: (data: Partial<Service>) => void;
   onCancel: () => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
 }
 
-export function ServiceForm({ service, categories = [], onSubmit, onCancel }: ServiceFormProps) {
+export function ServiceForm({
+  service,
+  categories = [],
+  onSubmit,
+  onCancel,
+  onDelete,
+  isDeleting = false,
+}: ServiceFormProps) {
   const { business } = useBusiness();
   const { data: professionals } = useProfessionals(business.id);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -305,6 +314,16 @@ export function ServiceForm({ service, categories = [], onSubmit, onCancel }: Se
           </div>
 
           <div className="flex gap-3 pt-4">
+            {service && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? 'Apagando...' : 'Apagar Serviço'}
+              </button>
+            )}
             <button
               type="submit"
               className="flex-1 rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-800"

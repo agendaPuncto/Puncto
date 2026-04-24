@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Service } from '@/types/business';
 
@@ -104,6 +104,25 @@ export function useUpdateService(businessId: string) {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['services', businessId] });
       queryClient.invalidateQueries({ queryKey: ['service', businessId, variables.serviceId] });
+    },
+  });
+}
+
+/**
+ * Delete a service
+ */
+export function useDeleteService(businessId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (serviceId: string) => {
+      const serviceRef = doc(db, 'businesses', businessId, 'services', serviceId);
+      await deleteDoc(serviceRef);
+      return serviceId;
+    },
+    onSuccess: (serviceId) => {
+      queryClient.invalidateQueries({ queryKey: ['services', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['service', businessId, serviceId] });
     },
   });
 }

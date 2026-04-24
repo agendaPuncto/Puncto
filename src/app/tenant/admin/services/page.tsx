@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useBusiness } from '@/lib/contexts/BusinessContext';
-import { useServices, useCreateService, useUpdateService } from '@/lib/queries/services';
+import { useServices, useCreateService, useUpdateService, useDeleteService } from '@/lib/queries/services';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { Service } from '@/types/business';
 import { MenuCategory } from '@/types/restaurant';
@@ -95,6 +95,7 @@ export default function AdminServicesPage() {
     : (services ?? []);
   const createService = useCreateService(business.id);
   const updateService = useUpdateService(business.id);
+  const deleteService = useDeleteService(business.id);
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
@@ -115,6 +116,19 @@ export default function AdminServicesPage() {
     } else {
       await createService.mutateAsync(data as any);
     }
+    handleClose();
+  };
+
+  const handleDeleteService = async () => {
+    if (!editingService) return;
+
+    const shouldDelete = window.confirm(
+      `Tem certeza que deseja apagar o serviço "${editingService.name}"? Esta ação não pode ser desfeita.`
+    );
+
+    if (!shouldDelete) return;
+
+    await deleteService.mutateAsync(editingService.id);
     handleClose();
   };
 
@@ -197,6 +211,8 @@ export default function AdminServicesPage() {
           categories={categories}
           onSubmit={handleSubmit}
           onCancel={handleClose}
+          onDelete={editingService ? handleDeleteService : undefined}
+          isDeleting={deleteService.isPending}
         />
       )}
 
