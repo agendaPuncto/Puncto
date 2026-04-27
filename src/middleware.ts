@@ -51,7 +51,9 @@ function getRoutingHostNoPort(request: NextRequest, directHostNoPort: string): s
     directHostNoPort === 'www.puncto.local' ||
     directHostNoPort.endsWith('.vercel.app');
 
-  const viaCloudflare = Boolean(request.headers.get('cf-ray'));
+  const viaCloudflare =
+    Boolean(request.headers.get('cf-ray')) ||
+    request.headers.get('x-via-cloudflare-worker') === '1';
 
   if (originLooksCanonical && viaCloudflare) return forwarded;
   return directHostNoPort;
