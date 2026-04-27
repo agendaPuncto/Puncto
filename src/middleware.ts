@@ -254,7 +254,7 @@ export async function middleware(request: NextRequest) {
     const studentAuthPath = '/auth/student/login';
     const studentHomePath = '/tenant/student';
 
-    if (!hasAuthCookie && !url.pathname.startsWith('/auth/')) {
+    if (!hasAuthCookie && !url.pathname.startsWith('/auth/') && !url.pathname.startsWith('/api/')) {
       const loginUrl = new URL(studentAuthPath, request.url);
       loginUrl.searchParams.set('returnUrl', url.pathname === '/' ? studentHomePath : url.pathname + url.search);
       const res = NextResponse.redirect(loginUrl);
