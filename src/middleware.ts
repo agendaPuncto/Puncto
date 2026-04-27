@@ -30,7 +30,10 @@ function getRoutingHostNoPort(request: NextRequest, directHostNoPort: string): s
     return directHostNoPort;
   }
 
-  const rawForwarded = request.headers.get('x-forwarded-host') || '';
+  const rawForwarded =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('x-original-host') ||
+    '';
   const forwarded = stripHostPort(rawForwarded.split(',')[0]?.trim() || '');
   if (!forwarded || forwarded === directHostNoPort) return directHostNoPort;
 
